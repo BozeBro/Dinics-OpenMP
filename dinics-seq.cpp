@@ -31,6 +31,12 @@ struct Vertex {
   int layer = UNSET;
   int parent = -1;
   std::vector<int> layered_dst;
+
+  void reset() {
+    this->current_edge = 0;
+    this->layer = UNSET;
+    this->layered_dst.clear();
+  }
 };
 struct Edge {
   int cap;
@@ -64,19 +70,30 @@ struct Graph {
     }
   }
 
-  void bfs() {
+  void printEdges() {
+    for (int i = 0; i < this->vertices.size(); i++) {
+      for (auto [neigh, edge] : this->neighbors[i]) {
+        printf("(src: %d dst: %d, cap: %d) ", i, neigh, edge.cap);
+      }
+      printf("\n");
+    }
+  }
+  bool bfs() {
+    bool foundSink = false;
     std::queue<int> frontier;
     std::vector<bool> visited(this->vertices.size(), false);
     this->vertices[SOURCE].layer = 0;
     frontier.push(SOURCE);
     while (!frontier.empty()) {
       int src = frontier.front();
+      if (src == SINK)
+        foundSink = true;
       assert(!visited[src]);
       frontier.pop();
       Vertex &srcVert = this->vertices[src];
       for (auto& [dst, edge] : this->neighbors[src]) {
         Vertex &dstVert = this->vertices[dst];
-        if (dstVert.layer <= srcVert.layer || !visited[dstVert.index])
+        if (dstVert.layer <= srcVert.layer || visited[dstVert.index] || this->neighbors[srcVert.index][dst].cap == 0)
           continue;
         srcVert.layered_dst.push_back(dst);
         if (dstVert.layer == UNSET) {
@@ -93,6 +110,7 @@ struct Graph {
       }
       visited[srcVert.index] = true;
     }
+    return foundSink;
   }
 
   bool dfs() {
@@ -101,15 +119,18 @@ struct Graph {
     stack.push(SOURCE);
     while (!stack.empty()) {
       int nodeInd = stack.top();
+      printf("%d\n", nodeInd);
       stack.pop();
       if (visited[nodeInd])
         continue;
       visited[nodeInd] = true;
-      for (auto [neigh, _] : neighbors[nodeInd]) {
-        if (!visited[neigh]) {
-          this->vertices[neigh].parent = nodeInd;
-          stack.push(neigh);
-        }
+      for (auto neigh : this->vertices[nodeInd].layered_dst) {
+        assert(this->neighbors[nodeInd][neigh].cap >= 0);
+        if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0)
+          continue;
+        printf("src: %d, dst: %d, cap: %d\n", nodeInd, neigh, this->neighbors[nodeInd][neigh].cap);
+        this->vertices[neigh].parent = nodeInd;
+        stack.push(neigh);
         if (neigh == SINK)
           return true;
       }
@@ -122,6 +143,13 @@ struct Graph {
     neighbors[start.index][end.index].cap = std::max(neighbors[start.index][end.index].cap, cap);
     neighbors[end.index][start.index].cap = std::max(neighbors[end.index][start.index].cap, 0);
   }
+
+  void reset() {
+    for (Vertex &v: this->vertices) {
+      v.reset();
+    }
+  }
+
   friend std::ostream& operator<<(std::ostream& os, const Graph& graph) {
     for (int i = 0; i < graph.neighbors.size(); i++) {
       os << "(" << i << " " << graph.vertices[i].layer << ") ";
@@ -139,13 +167,17 @@ int main(int argc, char const *argv[]) {
   // dst: 1
   // nodes 2,3
   // src -5-> [2,3] -5-> dst
-  int n = 4;
+  int n = 5;
   Graph graph(n);
   graph.addEdge({0}, {2}, 5);
-  graph.addEdge({0}, {3}, 5);
+  graph.addEdge({0}, {3}, 3);
 
-  graph.addEdge({2}, {1}, 5);
-  graph.addEdge({3}, {1}, 5);
+  graph.addEdge({2}, {3}, 10);
+  graph.addEdge({2}, {4}, 3);
+
+  graph.addEdge({3}, {4}, 10);
+
+  graph.addEdge({4}, {1}, 10);
   std::unordered_map<Vertex, Edge> src_map;
 
   /*
@@ -154,19 +186,29 @@ int main(int argc, char const *argv[]) {
       a. notate level of each vertex in the graph.  
       b. construct lists for "next vertex" for Blocking Flow
   */
-  graph.bfs();
-  std::cout << graph;
-  while (graph.dfs()) {
-    Vertex& dstVert = graph.vertices[SINK];
-    int minCapacity = minCapacity;
-    for (Vertex cur = dstVert; cur != graph.vertices[SOURCE]; cur = graph.vertices[cur.parent]) {
-      minCapacity = std::min(minCapacity, graph.neighbors[cur.index][cur.parent].cap);
+  while (graph.bfs()) {
+    printf("Did a BFS\n");
+    graph.printEdges();
+    while (graph.dfs()) {
+      printf("FInished dfs iteration\n");
+      Vertex& dstVert = graph.vertices[SINK];
+      int minCapacity = UNSET;
+      for (Vertex cur = dstVert; cur != graph.vertices[SOURCE]; cur = graph.vertices[cur.parent]) {
+        minCapacity = std::min(minCapacity, graph.neighbors[cur.parent][cur.index].cap);
+      }
+      for (Vertex cur = dstVert; cur != graph.vertices[SOURCE]; cur = graph.vertices[cur.parent]) {
+        graph.neighbors[cur.parent][cur.index].cap -= minCapacity;
+        graph.neighbors[cur.index][cur.parent].cap += minCapacity;
+      }
     }
-    for (Vertex cur = dstVert; cur != graph.vertices[SOURCE]; cur = graph.vertices[cur.parent]) {
-      graph.neighbors[cur.index][cur.parent].cap -= minCapacity;
-      graph.neighbors[cur.parent][cur.index].cap += minCapacity;
-    }
+    graph.reset();
   }
+  graph.printEdges();
+  /*
+
+    s -> a
+      
+  */
   /* 
   2. Run DFS on the level graph
     a. have pointer/iterator to edge for each vertex, increment on dead edge
