@@ -10,14 +10,19 @@ Be able to change flow of Forward and Backward Edge Easily
 Be able to run BFS and DFS through it in a simple way
 
 */
+#include <cstdlib>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <ostream>
 #include <queue>
 #include <stack>
+#include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 
@@ -40,6 +45,7 @@ struct Vertex {
 };
 struct Edge {
   int cap;
+  int initial_cap;
 };
 namespace std {
 template <> struct hash<Vertex> {
@@ -119,7 +125,7 @@ struct Graph {
       int nodeInd = stack.top();
       visited[nodeInd] = true;
       Vertex &srcVert = this->vertices[nodeInd];
-      auto &neighborEdges = this->neighbors[nodeInd];
+      auto &neighborEdges = this->vertices[nodeInd].layered_dst;
       if (srcVert.current_edge == neighborEdges.size()) {
         stack.pop();
         increment(srcVert.parent);
@@ -146,7 +152,7 @@ struct Graph {
     stack.push(SOURCE);
     while (!stack.empty()) {
       int nodeInd = stack.top();
-      printf("%d\n", nodeInd);
+      // printf("%d\n", nodeInd);
       stack.pop();
       if (visited[nodeInd])
         continue;
@@ -155,8 +161,8 @@ struct Graph {
         assert(this->neighbors[nodeInd][neigh].cap >= 0);
         if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0)
           continue;
-        printf("src: %d, dst: %d, cap: %d\n", nodeInd, neigh,
-               this->neighbors[nodeInd][neigh].cap);
+        // printf("src: %d, dst: %d, cap: %d\n", nodeInd, neigh,
+        //        this->neighbors[nodeInd][neigh].cap);
         this->vertices[neigh].parent = nodeInd;
         stack.push(neigh);
         if (neigh == SINK)
@@ -168,10 +174,12 @@ struct Graph {
 
   void addEdge(const Vertex &start, const Vertex &end, int cap) {
     // Max prevent capacity override if there are 2 node cycles
-    neighbors[start.index][end.index].cap =
-        std::max(neighbors[start.index][end.index].cap, cap);
-    neighbors[end.index][start.index].cap =
-        std::max(neighbors[end.index][start.index].cap, 0);
+    int cap_value = std::max(neighbors[start.index][end.index].cap, cap);
+    neighbors[start.index][end.index] = {cap_value, cap_value};
+    cap_value = std::max(neighbors[end.index][start.index].cap, 0);
+    neighbors[end.index][start.index] = {cap_value, cap_value};
+    // neighbors[end.index][start.index].cap =
+    //     std::max(neighbors[end.index][start.index].cap, 0);
   }
 
   void reset() {
@@ -189,25 +197,75 @@ struct Graph {
   }
 };
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char **argv) {
 
   // Generate graph from input
   // first two are src, dst
   // src: 0
   // dst: 1
   // nodes 2,3
-  // src -5-> [2,3] -5-> dst
-  int n = 5;
+  // src -5-> [2,3] -5-> dstVert
+  std::string input_filename;
+  char mode = '\0';
+  int num_threads = 0;
+  int opt;
+  while ((opt = getopt(argc, argv, "f:n:m:")) != -1) {
+    switch (opt) {
+    case 'f':
+      input_filename = optarg;
+      break;
+    case 'n':
+      num_threads = atoi(optarg);
+      break;
+    case 'm':
+      mode = *optarg;
+      break;
+
+    default:
+      std::cerr << "Usage: " << argv[0]
+                << " -f input_filename -n num_threads -m parallel_mode -b "
+                   "batch_size\n";
+      exit(EXIT_FAILURE);
+    }
+  }
+  if (empty(input_filename)) {
+    std::cerr << "Usage: " << argv[0]
+              << " -f input_filename -n num_threads "
+                 "-m parallel_mode\n";
+    exit(EXIT_FAILURE);
+  }
+
+  std::ifstream fin(input_filename);
+  if (!fin) {
+    std::cerr << "Unable to open file: " << input_filename << ".\n";
+    exit(EXIT_FAILURE);
+  }
+  int n;
+  fin >> n;
+  // int n = 5;
   Graph graph(n);
-  graph.addEdge({0}, {2}, 5);
-  graph.addEdge({0}, {3}, 3);
+  for (int i = 0; i < n; i++) {
+    int cnt;
+    fin >> cnt;
+    if (cnt == 0)
+      continue;
+    graph.neighbors[i].reserve(cnt);
+    int neigh, cap;
+    for (int j = 0; j < cnt; j++) {
+      fin >> neigh >> cap;
 
-  graph.addEdge({2}, {3}, 10);
-  graph.addEdge({2}, {4}, 3);
+      graph.addEdge({i}, {j}, cap);
+    }
+  }
+  // graph.addEdge({0}, {2}, 5);
+  // graph.addEdge({0}, {3}, 3);
 
-  graph.addEdge({3}, {4}, 10);
+  // graph.addEdge({2}, {3}, 10);
+  // graph.addEdge({2}, {4}, 3);
 
-  graph.addEdge({4}, {1}, 10);
+  // graph.addEdge({3}, {4}, 10);
+
+  // graph.addEdge({4}, {1}, 10);
   std::unordered_map<Vertex, Edge> src_map;
 
   /*
@@ -218,7 +276,7 @@ int main(int argc, char const *argv[]) {
   */
   while (graph.bfs()) {
     printf("Did a BFS\n");
-    graph.printEdges();
+    // graph.printEdges();
     while (graph.dfsDeadEdge()) {
       printf("Finished dfs iteration\n");
       Vertex &dstVert = graph.vertices[SINK];
@@ -236,7 +294,19 @@ int main(int argc, char const *argv[]) {
     }
     graph.reset();
   }
-  graph.printEdges();
+  // graph.printEdges();
+  int flow = 0;
+  for (auto [i, edge] : graph.neighbors[SOURCE]) {
+    std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
+    flow += std::max(0, edge.initial_cap - edge.cap);
+  }
+  std::cout << "\n\n";
+  for (int src = 1; src < n; src++) {
+    auto edge = graph.neighbors[src][SOURCE];
+    std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
+    flow -= std::max(0, edge.initial_cap - edge.cap);
+  }
+  std::cout << flow << std::endl;
   /*
 
     s -> a
