@@ -71,7 +71,7 @@ public class GraphGenerator
 
     public static void main(String[] args)
     {
-        frontierEdges(100, 1000,  2, 100);
+        frontierEdges(10000, 1000000,  2, 100);
     }
 
     public static void randomEdges(int verts, int edges, int maxCap)
