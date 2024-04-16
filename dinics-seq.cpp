@@ -40,6 +40,7 @@ struct Vertex {
   void reset() {
     this->current_edge = 0;
     this->layer = UNSET;
+    this->parent = -1;
     this->layered_dst.clear();
   }
 };
@@ -86,7 +87,8 @@ struct Graph {
     for (int i = 0; i < this->vertices.size(); i++) {
       for (auto [neigh, edge] : this->neighbors[i]) {
         if (edge.initial_cap > 0)
-          printf("%d -> %d [label = \"%d/%d\"];\n", i, neigh, std::max(0, edge.initial_cap - edge.cap), edge.initial_cap);
+          printf("%d -> %d [label = \"%d/%d\"];\n", i, neigh,
+                 std::max(0, edge.initial_cap - edge.cap), edge.initial_cap);
       }
     }
     printf("}\n");
@@ -156,8 +158,8 @@ struct Graph {
     stack.push(SOURCE);
     while (!stack.empty()) {
       int nodeInd = stack.top();
-      visited[nodeInd] = true;
       Vertex &srcVert = this->vertices[nodeInd];
+      visited[nodeInd] = true;
       auto &neighborEdges = this->vertices[nodeInd].layered_dst;
       if (srcVert.current_edge == neighborEdges.size()) {
         stack.pop();
@@ -331,7 +333,7 @@ int main(int argc, char **argv) {
   int flow = 0;
   for (auto [i, edge] : graph.neighbors[SOURCE]) {
     std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
-    flow += std::max(0, edge.initial_cap - edge.cap);
+    flow += edge.initial_cap - edge.cap;
   }
   std::cout << "\n\n";
   for (int src = 1; src < n; src++) {
