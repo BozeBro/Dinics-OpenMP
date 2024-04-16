@@ -39,6 +39,9 @@ Be able to run BFS and DFS through it in a simple way
 #define PRINTF(format, ...) ((void)0)
 #endif
 
+static double bfs_time = 0;
+static double dfs_time = 0;
+
 struct Vertex {
   int index;
   int current_edge = 0;
@@ -123,6 +126,7 @@ struct Graph {
   }
 
   bool bfs() {
+    auto start = std::chrono::steady_clock::now();
     bool foundSink = false;
     std::queue<int> frontier;
     std::vector<bool> visited(this->vertices.size(), false);
@@ -153,6 +157,9 @@ struct Graph {
       }
       visited[srcVert.index] = true;
     }
+
+    auto end = std::chrono::steady_clock::now();
+    bfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
     return foundSink;
   }
   void increment(int node) {
@@ -160,6 +167,7 @@ struct Graph {
       this->vertices[node].current_edge++;
   }
   bool dfsDeadEdge() {
+    auto start = std::chrono::steady_clock::now();
     std::vector<bool> visited(this->vertices.size(), false);
     std::stack<int> stack;
     stack.push(SOURCE);
@@ -181,10 +189,15 @@ struct Graph {
         continue;
       }
       this->vertices[neigh].parent = nodeInd;
-      if (neigh == SINK)
+      if (neigh == SINK) {
+        auto end = std::chrono::steady_clock::now();
+        dfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
         return true;
+      }
       stack.push(neigh);
     }
+    auto end = std::chrono::steady_clock::now();
+    dfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
     return false;
   }
 
@@ -365,7 +378,10 @@ int main(int argc, char **argv) {
   printf("Compute time %f\n", compute_time);
   printf("Init time %f\n", init_time);
   printf("Total time %f\n", compute_time + init_time);
+  printf("BFS time %f\n", bfs_time);
+  printf("DFS time %f\n", dfs_time);
   printf("Flow value %d\n", flow);
+
   // graph.printEdgesVisualized();
 
   /*
