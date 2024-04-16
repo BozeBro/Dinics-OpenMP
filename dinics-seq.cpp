@@ -159,8 +159,7 @@ struct Graph {
     while (!stack.empty()) {
       int nodeInd = stack.top();
       Vertex &srcVert = this->vertices[nodeInd];
-      if (srcVert.parent != -1)
-        visited[nodeInd] = true;
+      visited[nodeInd] = true;
       auto &neighborEdges = this->vertices[nodeInd].layered_dst;
       if (srcVert.current_edge == neighborEdges.size()) {
         stack.pop();
