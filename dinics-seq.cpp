@@ -87,7 +87,8 @@ struct Graph {
     for (int i = 0; i < this->vertices.size(); i++) {
       for (auto [neigh, edge] : this->neighbors[i]) {
         if (edge.initial_cap > 0)
-          printf("%d -> %d [label = \"%d/%d\"];\n", i, neigh, std::max(0, edge.initial_cap - edge.cap), edge.initial_cap);
+          printf("%d -> %d [label = \"%d/%d\"];\n", i, neigh,
+                 std::max(0, edge.initial_cap - edge.cap), edge.initial_cap);
       }
     }
     printf("}\n");
@@ -335,9 +336,6 @@ int main(int argc, char **argv) {
     std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
   }
-<<<<<<< HEAD
-  printf("%d\n", flow);
-=======
   std::cout << "\n\n";
   for (int src = 1; src < n; src++) {
     auto edge = graph.neighbors[src][SOURCE];
@@ -347,7 +345,6 @@ int main(int argc, char **argv) {
   graph.printEdgesVisualized();
   std::cout << flow << std::endl;
   graph.validate();
->>>>>>> refs/remotes/origin/main
   /*
 
     s -> a
