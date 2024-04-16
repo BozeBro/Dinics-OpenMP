@@ -1,9 +1,12 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Random;
 
 public class GraphGenerator
 {
+    public static Random random = new Random(0);
+    
     static class Edge
     {
         int destination;
@@ -18,6 +21,11 @@ public class GraphGenerator
         public void print()
         {
             System.out.print(destination + " " + capacity + " ");
+        }
+
+        public void printViz(int src)
+        {
+            System.out.println(src + " -> " + destination + " [ label = " + capacity + "];");
         }
     }
 
@@ -45,6 +53,14 @@ public class GraphGenerator
             }
             System.out.println();
         }
+
+        public void printViz()
+        {
+            for (Edge e: this.neighbors.values())
+            {
+                e.printViz(id);
+            }
+        }
     }
 
     static class Graph
@@ -67,6 +83,16 @@ public class GraphGenerator
                 nodes.get(i).print();
             }
         }
+        
+        void printViz()
+        {
+            System.out.println("digraph G {");
+            for (int i = 0; i < nodes.size(); i++)
+            {
+                nodes.get(i).printViz();
+            }
+            System.out.println("}");
+        }
     }
 
     public static void main(String[] args)
@@ -82,9 +108,9 @@ public class GraphGenerator
         {
             while (true)
             {
-                int start = (int) (Math.random() * verts);
-                int end = (int) (Math.random() * verts);
-                int capacity = (int) (Math.random() * (maxCap - 1) + 1);
+                int start = (int) (random.nextDouble() * verts);
+                int end = (int) (random.nextDouble() * verts);
+                int capacity = (int) (random.nextDouble() * (maxCap - 1) + 1);
 
                 if (start == end)
                     continue;
@@ -105,7 +131,7 @@ public class GraphGenerator
         for (int i = 0; i < edges;)
         {
             int start = frontier.pop();
-            int count = (int) (Math.random() * (maxOutEdges + 1));
+            int count = (int) (random.nextDouble() * (maxOutEdges + 1));
 
             if (frontier.isEmpty() && count == 0)
                 count++;
@@ -113,8 +139,8 @@ public class GraphGenerator
             int added = 0;
             while (added < count)
             {
-                int end = (int) (Math.random() * verts);
-                int capacity = (int) (Math.random() * (maxCap - 1) + 1);
+                int end = (int) (random.nextDouble() * verts);
+                int capacity = (int) (random.nextDouble() * (maxCap - 1) + 1);
 
                 if (start == end)
                     continue;
@@ -128,5 +154,6 @@ public class GraphGenerator
         }
 
         g.print();
+        g.printViz();
     }
 }
