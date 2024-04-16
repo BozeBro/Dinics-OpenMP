@@ -1,11 +1,8 @@
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Random;
+import java.util.*;
 
 public class GraphGenerator
 {
-    public static Random random = new Random(0);
+    public static Random random;
     
     static class Edge
     {
@@ -97,7 +94,20 @@ public class GraphGenerator
 
     public static void main(String[] args)
     {
-        frontierEdges(10, 20, 2, 5);
+        try
+        {
+            random = new Random(Integer.parseInt(args[0]));
+
+            if (args[1].equals("frontier"))
+                frontierEdges(Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]), Integer.parseInt(args[5]));
+            else
+                randomEdges(Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]));
+        }
+        catch (Exception e)
+        {
+            System.out.println("Give args in format: [<seed> frontier <verts> <edges> <maxOutEdges> <maxCapacity>] or [<seed> random <verts> <edges> <maxCapacity>]");
+            e.printStackTrace();
+        }
     }
 
     public static void randomEdges(int verts, int edges, int maxCap)
@@ -120,6 +130,8 @@ public class GraphGenerator
                 break;
             }
         }
+
+        g.print();
     }
 
     public static void frontierEdges(int verts, int edges, int maxOutEdges, int maxCap)
@@ -154,6 +166,5 @@ public class GraphGenerator
         }
 
         g.print();
-        g.printViz();
     }
 }
