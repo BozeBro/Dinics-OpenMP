@@ -26,6 +26,7 @@ Be able to run BFS and DFS through it in a simple way
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <omp.h>
 
 #define UNSET std::numeric_limits<int>::max()
 #define SOURCE 0
@@ -124,6 +125,96 @@ struct Graph {
     // printf("validation success!\n");
     // return false;
   }
+  bool bfsParallel() {
+    // initialize visited array
+    std::vector<bool> visited(this->vertices.size(), false);
+    // initialize current frontier
+    std::vector<int> frontier{SOURCE};
+    std::vector<int> newFrontier(this->vertices.size());
+    int size;
+    int lastWrite;
+    // initialize threads
+    // Per iteration:
+    while (!frontier.empty()) {
+      // newFrontier.reserve(this->vertices.size());
+      size = 0;
+      lastWrite = 0;
+      bool found = false;
+      #pragma omp parallel shared(newFrontier, frontier, lastWrite, found) threadprivate(localFrontier, localLastWrite) {
+        // initialize local frontier
+        std::vector<int> localFrontier;
+      
+        #pragma omp parallel for reduction(+: size)
+        for (int i = 0; i < frontier.size(); i++) {
+          int index = frontier[i];
+          for (auto [neigh, edge] : this->neighbors[index]) {
+            bool edited = true;
+            #pragma omp atomic capture 
+            { edited = visited[neigh]; visited[neigh] = true; }
+            if (!edited) {
+              if (index == SINK)
+                found = true;
+              Vertex& srcVert = this->neighbors[index];
+              Vertex& dstVert = this->vertices[neigh];
+              visitVertex(srcVert, dstVert);
+              localFrontier.push_back(neigh);
+              size += 1;
+            }
+          }
+        }
+        int startIndex = -1;
+        #pragma omp atomic capture 
+        { startIndex = lastWrite; lastWrite += localFrontier.size(); }
+        memcpy(newFrontier.data() + startIndex * sizeof(int), localFrontier.data(), sizeof(int) * localFrontier.size());
+      }
+      if (found)
+        return true;
+      frontier = newFrontier;
+    }
+  
+    // Per thread:
+    // Pick out vert from old frontier
+    // For each neighbor:
+    // Test and set visited 
+    // If visited already, skip
+    // Else, add it to the new frontier and update accordingly
+      // change depth
+      // set visited
+      // add to local frontier
+    // upon finish: 
+    /*
+    #pragma parallel threadprivate(tfront, last_write) {
+    #program omp for  {
+        // do work --> local tfront edited, last_write edited
+    }
+    atomic {
+      i = glast_write; i += last_write;
+    }
+    mempcy(frontier, )
+    }
+
+    */
+
+    // Merge all thread new frontiers, set old frontier to that
+    // Exit if we found the sink
+    return false;
+  }
+  
+  void visitVertex(Vertex& srcVert, Vertex& dstVert) {
+    if (dstVert.layer <= srcVert.layer || visited[dstVert.index] ||
+        this->neighbors[srcVert.index][dst].cap == 0)
+      continue;
+    srcVert.layered_dst.push_back(dst);
+    if (dstVert.layer == UNSET) {
+      frontier.push(dstVert.index);
+      dstVert.layer = srcVert.layer + 1;
+    } else {
+      if (dstVert.layer != srcVert.layer + 1) {
+        printf("index: %d %d\n", dstVert.index, dstVert.layer);
+        abort();
+      }
+    }
+  }
 
   bool bfs() {
     auto start = std::chrono::steady_clock::now();
@@ -141,19 +232,7 @@ struct Graph {
       Vertex &srcVert = this->vertices[src];
       for (auto &[dst, edge] : this->neighbors[src]) {
         Vertex &dstVert = this->vertices[dst];
-        if (dstVert.layer <= srcVert.layer || visited[dstVert.index] ||
-            this->neighbors[srcVert.index][dst].cap == 0)
-          continue;
-        srcVert.layered_dst.push_back(dst);
-        if (dstVert.layer == UNSET) {
-          frontier.push(dstVert.index);
-          dstVert.layer = srcVert.layer + 1;
-        } else {
-          if (dstVert.layer != srcVert.layer + 1) {
-            printf("index: %d %d\n", dstVert.index, dstVert.layer);
-            abort();
-          }
-        }
+        visitVertex(srcVert, dstVert);
       }
       visited[srcVert.index] = true;
     }

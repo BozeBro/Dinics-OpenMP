@@ -1,4 +1,6 @@
-Compute time 1.231977
-Init time 2.306019
-Total time 3.537996
-Flow value 652
+Compute time 63.106117
+Init time 131.585684
+Total time 194.691801
+BFS time 60.385660
+DFS time 0.763157
+Flow value 4715076
