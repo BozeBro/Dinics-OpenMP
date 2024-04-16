@@ -81,6 +81,39 @@ struct Graph {
       printf("\n");
     }
   }
+
+  void printEdgesVisualized() {
+    printf("digraph G {\n");
+    for (int i = 0; i < this->vertices.size(); i++) {
+      for (auto [neigh, edge] : this->neighbors[i]) {
+        if (edge.initial_cap > 0)
+          printf("%d -> %d [label = \"%d/%d\"];\n", i, neigh, std::max(0, edge.initial_cap - edge.cap), edge.initial_cap);
+      }
+    }
+    printf("}\n");
+  }
+
+  void validate() {
+    int srcFlow = -1;
+    for (int vert = 0; vert < this->vertices.size(); vert++) {
+      int flow = 0;
+      for (auto [i, edge] : this->neighbors[vert]) {
+        flow += std::max(0, edge.initial_cap - edge.cap);
+      }
+      for (int src = 0; src < this->vertices.size(); src++) {
+        auto edge = this->neighbors[src][vert];
+        flow -= std::max(0, edge.initial_cap - edge.cap);
+      }
+      if (vert == 0)
+        srcFlow = flow;
+      else if (vert == 1)
+        assert(flow == -srcFlow);
+      else
+        assert(flow == 0);
+    }
+    printf("validation success!\n");
+  }
+
   bool bfs() {
     bool foundSink = false;
     std::queue<int> frontier;
@@ -302,7 +335,19 @@ int main(int argc, char **argv) {
     std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
   }
+<<<<<<< HEAD
   printf("%d\n", flow);
+=======
+  std::cout << "\n\n";
+  for (int src = 1; src < n; src++) {
+    auto edge = graph.neighbors[src][SOURCE];
+    std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
+    flow -= std::max(0, edge.initial_cap - edge.cap);
+  }
+  graph.printEdgesVisualized();
+  std::cout << flow << std::endl;
+  graph.validate();
+>>>>>>> refs/remotes/origin/main
   /*
 
     s -> a
