@@ -15,6 +15,7 @@ Be able to run BFS and DFS through it in a simple way
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -240,6 +241,7 @@ int main(int argc, char **argv) {
   // dst: 1
   // nodes 2,3
   // src -5-> [2,3] -5-> dstVert
+  const auto init_start = std::chrono::steady_clock::now();
   std::string input_filename;
   char mode = '\0';
   int num_threads = 0;
@@ -309,6 +311,9 @@ int main(int argc, char **argv) {
       a. notate level of each vertex in the graph.
       b. construct lists for "next vertex" for Blocking Flow
   */
+  const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(
+  std::chrono::steady_clock::now() - init_start).count();
+  const auto compute_start = std::chrono::steady_clock::now();
   while (graph.bfs()) {
     printf("Did a BFS\n");
     // graph.printEdges();
@@ -341,6 +346,8 @@ int main(int argc, char **argv) {
     std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow -= std::max(0, edge.initial_cap - edge.cap);
   }
+  const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(
+    std::chrono::steady_clock::now() - compute_start).count();
   graph.printEdgesVisualized();
   std::cout << flow << std::endl;
   graph.validate();
