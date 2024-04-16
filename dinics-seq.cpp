@@ -14,8 +14,8 @@ Be able to run BFS and DFS through it in a simple way
 
 #include <algorithm>
 #include <cassert>
-#include <cstdio>
 #include <chrono>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -30,6 +30,14 @@ Be able to run BFS and DFS through it in a simple way
 #define UNSET std::numeric_limits<int>::max()
 #define SOURCE 0
 #define SINK 1
+#define MY_PRINT_ENABLED
+#ifdef MY_PRINT_ENABLED
+// If it's defined, define PRINTF as printf
+#define PRINTF(format, ...) printf(format, ##__VA_ARGS__)
+#else
+// If it's not defined, define PRINTF as an empty macro
+#define PRINTF(format, ...) ((void)0)
+#endif
 
 struct Vertex {
   int index;
@@ -96,24 +104,22 @@ struct Graph {
   }
 
   void validate() {
-    int srcFlow = -1;
+    std::vector<int> vertFlows(this->vertices.size());
     for (int vert = 0; vert < this->vertices.size(); vert++) {
-      int flow = 0;
+      // printf("outer vert %d\n", vert);
       for (auto [i, edge] : this->neighbors[vert]) {
-        flow += std::max(0, edge.initial_cap - edge.cap);
+        vertFlows[vert] += std::max(0, edge.initial_cap - edge.cap);
+        vertFlows[i] -= std::max(0, edge.initial_cap - edge.cap);
       }
-      for (int src = 0; src < this->vertices.size(); src++) {
-        auto edge = this->neighbors[src][vert];
-        flow -= std::max(0, edge.initial_cap - edge.cap);
-      }
-      if (vert == 0)
-        srcFlow = flow;
-      else if (vert == 1)
-        assert(flow == -srcFlow);
-      else
-        assert(flow == 0);
     }
-    printf("validation success!\n");
+    for (int vert = 0; vert < this->vertices.size(); vert++) {
+      if (vert == 0 || vert == 1)
+        assert(vertFlows[0] == -vertFlows[1]);
+      else
+        assert(vertFlows[vert] == 0);
+    }
+    // printf("validation success!\n");
+    // return false;
   }
 
   bool bfs() {
@@ -311,14 +317,16 @@ int main(int argc, char **argv) {
       a. notate level of each vertex in the graph.
       b. construct lists for "next vertex" for Blocking Flow
   */
-  const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(
-  std::chrono::steady_clock::now() - init_start).count();
+  const double init_time =
+      std::chrono::duration_cast<std::chrono::duration<double>>(
+          std::chrono::steady_clock::now() - init_start)
+          .count();
   const auto compute_start = std::chrono::steady_clock::now();
   while (graph.bfs()) {
-    printf("Did a BFS\n");
+    // printf("Did a BFS\n");
     // graph.printEdges();
     while (graph.dfsDeadEdge()) {
-      printf("Finished dfs iteration\n");
+      // printf("Finished dfs iteration\n");
       Vertex &dstVert = graph.vertices[SINK];
       int minCapacity = UNSET;
       for (Vertex cur = dstVert; cur != graph.vertices[SOURCE];
@@ -335,22 +343,31 @@ int main(int argc, char **argv) {
     graph.reset();
   }
   // graph.printEdges();
+  // printf("Start validating\n");
+  // graph.validate();
+  // printf("End validating\n");
   int flow = 0;
+
   for (auto [i, edge] : graph.neighbors[SOURCE]) {
-    std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
+    // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
   }
-  std::cout << "\n\n";
+  // std::cout << "\n\n";
   for (int src = 1; src < n; src++) {
     auto edge = graph.neighbors[src][SOURCE];
-    std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
+    // std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow -= std::max(0, edge.initial_cap - edge.cap);
   }
-  const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(
-    std::chrono::steady_clock::now() - compute_start).count();
-  graph.printEdgesVisualized();
-  std::cout << flow << std::endl;
-  graph.validate();
+  const double compute_time =
+      std::chrono::duration_cast<std::chrono::duration<double>>(
+          std::chrono::steady_clock::now() - compute_start)
+          .count();
+  printf("Compute time %f\n", compute_time);
+  printf("Init time %f\n", init_time);
+  printf("Total time %f\n", compute_time + init_time);
+  printf("Flow value %d\n", flow);
+  // graph.printEdgesVisualized();
+
   /*
 
     s -> a

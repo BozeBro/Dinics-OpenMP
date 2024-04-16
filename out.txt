@@ -1,0 +1,4 @@
+Compute time 1.520945
+Init time 1.991439
+Total time 3.512384
+Flow value 961
