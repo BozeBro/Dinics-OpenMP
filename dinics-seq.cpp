@@ -40,6 +40,7 @@ struct Vertex {
   void reset() {
     this->current_edge = 0;
     this->layer = UNSET;
+    this->parent = -1;
     this->layered_dst.clear();
   }
 };
@@ -123,8 +124,9 @@ struct Graph {
     stack.push(SOURCE);
     while (!stack.empty()) {
       int nodeInd = stack.top();
-      visited[nodeInd] = true;
       Vertex &srcVert = this->vertices[nodeInd];
+      if (srcVert.parent != -1)
+        visited[nodeInd] = true;
       auto &neighborEdges = this->vertices[nodeInd].layered_dst;
       if (srcVert.current_edge == neighborEdges.size()) {
         stack.pop();
@@ -254,7 +256,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < cnt; j++) {
       fin >> neigh >> cap;
 
-      graph.addEdge({i}, {j}, cap);
+      graph.addEdge({i}, {neigh}, cap);
     }
   }
   // graph.addEdge({0}, {2}, 5);
@@ -298,15 +300,9 @@ int main(int argc, char **argv) {
   int flow = 0;
   for (auto [i, edge] : graph.neighbors[SOURCE]) {
     std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
-    flow += std::max(0, edge.initial_cap - edge.cap);
+    flow += edge.initial_cap - edge.cap;
   }
-  std::cout << "\n\n";
-  for (int src = 1; src < n; src++) {
-    auto edge = graph.neighbors[src][SOURCE];
-    std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
-    flow -= std::max(0, edge.initial_cap - edge.cap);
-  }
-  std::cout << flow << std::endl;
+  printf("%d\n", flow);
   /*
 
     s -> a
