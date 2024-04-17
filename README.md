@@ -46,3 +46,77 @@ By April 15 - Finish sequential algorithm, input generation, and generate result
 By April 22 - Explore parallelizing BFS (layered graph)
 By April 29 - Explore parallelizing blocking flow generation (DFS calls)
 Final - Measure different versions of the project compared to the sequential version.
+
+# Milestone Report
+
+# Sequential results on Large Graphs
+Device Information
+
+OS
+Mac OS (Sonoma 14.1.1) 
+Chip
+M1 (2020
+Memory
+16 GB
+
+
+Node Count: 50k
+Edge Count: 50M
+Max Capacity available: 10k
+`java generator/GraphGenerator.java 0 random 50000 50000000 10000`
+Data Keys
+Values
+Initialization time
+131.585684
+Compute time
+63.106117
+Total time
+194.691801
+BFS time
+60.385660
+DFS time
+0.763157
+Flow Value
+4715076
+
+
+
+Results when run on a very dense graph with 4000 vertices and 1000 max flow:
+(M1 Max Macbook Pro, 2021)
+java GraphGenerator.java 0 random 4000 16000000 1000
+Data Keys
+Values
+Initialization time
+10.669528
+Compute time
+4.623483
+Total time
+15.293011
+BFS time
+3.525797
+DFS time
+0.688907
+Flow Value
+1253545
+
+# Work Completed so far
+Currently, we have implemented the sequential algorithm for Dinic’s algorithm. We took measurements of the computation time of the BFS and DFS usage within the algorithm, as well as initialization time and reference flow value. We created a tool to export information about the graph into GraphViz format, which can be used to visualize the graph - useful for debugging. We created a graph generator that supports generating two kinds of graphs in various sizes - ones with random edges between vertices, and ones with guaranteed connectivity. We created initial tests that contained a large number of vertices, edges, and edge capacities. We started work on parallelizing the BFS portion of the Dinic’s algorithm. From previous benchmarking, we found that BFS takes most of the computation time and shows to be the bottleneck, taking between 80% of the time (on very dense graphs) to 99% (on most graphs) of the time.
+
+
+
+# Change of Plans
+Given how much of a bottleneck BFS is in our measurements, we plan to spend more time finding faster parallel BFS algorithms to speed up Dinic’s instead of equally exploring DFS and BFS approaches. Our current approach is to use atomic operations with OpenMP to create a lock-free BFS, but we are also considering exploring using CUDA and/or a per-vertex approach (as opposed to a per-frontier approach). If we are able to speed up BFS by 5x, we may still consider optimizing DFS (because in that case it would be more of a bottleneck), but otherwise, it may be more productive for us to explore other BFS approaches or other algorithms such as Push-Relabel.
+
+# Schedule Updated
+April 21 - Get Parallel (lock free queue) BFS working
+April 23 - Make progress for CUDA BFS and per-vertex BFS approach
+April 30 - Complete CUDA and per-vertex approach, perhaps start attempting push-relabel
+May 6 (final) - Finish Creating Presentation Poster, finish results for different BFS implementations, visualize results and speedup graphs.
+
+# Deliverables
+Visualization of different implementation results and speedups of Dinic’s algorithm using different BFS implementations running with Mac OS, Gates machines, and PSC machines.
+Show time taken of BFS vs DFS for each implementation.
+Plots for computation time over different graph inputs and techniques
+
+# Concerns
+Not too sure if it is more interesting to examine different types of BFS implementations vs. making a parallel push-relabel algorithm. 
