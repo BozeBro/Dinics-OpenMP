@@ -16,9 +16,11 @@ Be able to run BFS and DFS through it in a simple way
 #include <cassert>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <omp.h>
 #include <ostream>
 #include <queue>
 #include <stack>
@@ -26,9 +28,6 @@ Be able to run BFS and DFS through it in a simple way
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-#include <omp.h>
-#include <cstring>
-#include <algorithm>
 
 #define UNSET std::numeric_limits<int>::max()
 #define SOURCE 0
@@ -142,28 +141,32 @@ struct Graph {
       newFrontier.reserve(this->vertices.size());
       size = 0;
       lastWrite = 0;
-      
+
       // std::vector<int> localFrontier;
       std::vector<int> localFrontier;
       // #pragma omp threadprivate(localFrontier)
 
-#pragma omp parallel shared(newFrontier, frontier, lastWrite, found, visited) firstprivate(localFrontier)
+#pragma omp parallel shared(newFrontier, frontier, lastWrite, found, visited)  \
+    firstprivate(localFrontier)
       {
-        
+
         // initialize local frontier
-      
-        #pragma omp parallel for reduction(+: size)
+
+#pragma omp parallel for reduction(+ : size)
         for (int i = 0; i < frontier.size(); i++) {
           int index = frontier[i];
           for (const auto [neigh, edge] : this->neighbors[index]) {
             bool edited = true;
-            #pragma omp atomic capture 
-            { edited = visited[neigh]; visited[neigh] = true; }
+#pragma omp atomic capture
+            {
+              edited = visited[neigh];
+              visited[neigh] = true;
+            }
             if (!edited) {
               if (index == SINK)
                 found = true;
-              Vertex& srcVert = this->vertices[index];
-              Vertex& dstVert = this->vertices[neigh];
+              Vertex &srcVert = this->vertices[index];
+              Vertex &dstVert = this->vertices[neigh];
               if (visitVertex(srcVert, dstVert, visited))
                 localFrontier.push_back(neigh);
               size += 1;
@@ -171,19 +174,23 @@ struct Graph {
           }
         }
         int startIndex = -1;
-        #pragma omp atomic capture 
-        { startIndex = lastWrite; lastWrite += localFrontier.size(); }
-        memcpy(newFrontier.data() + startIndex * sizeof(int), localFrontier.data(), sizeof(int) * localFrontier.size());
+#pragma omp atomic capture
+        {
+          startIndex = lastWrite;
+          lastWrite += localFrontier.size();
+        }
+        memcpy(newFrontier.data() + startIndex * sizeof(int),
+               localFrontier.data(), sizeof(int) * localFrontier.size());
       }
-        if (found)
-          return true;
-        frontier = newFrontier;
-      
+      if (found)
+        return true;
+      frontier = newFrontier;
     }
     return false;
   }
 
-  // bool visitVertex(Vertex& srcVert, Vertex& dstVert, const std::vector<int>& visited) {
+  // bool visitVertex(Vertex& srcVert, Vertex& dstVert, const std::vector<int>&
+  // visited) {
   //   if (dstVert.layer <= srcVert.layer || visited[dstVert.index] ||
   //       this->neighbors[srcVert.index][dstVert.index].cap == 0)
   //       return false;
@@ -199,12 +206,13 @@ struct Graph {
   //     }
   //   }
   //   return false;
-  // }  
-template<typename T>
-  bool visitVertex(Vertex& srcVert, Vertex& dstVert, const std::vector<T>& visited) {
+  // }
+  template <typename T>
+  bool visitVertex(Vertex &srcVert, Vertex &dstVert,
+                   const std::vector<T> &visited) {
     if (dstVert.layer <= srcVert.layer || visited[dstVert.index] ||
         this->neighbors[srcVert.index][dstVert.index].cap == 0)
-        return false;
+      return false;
     srcVert.layered_dst.push_back(dstVert.index);
     if (dstVert.layer == UNSET) {
       // frontier.push(dstVert.index);
@@ -243,7 +251,9 @@ template<typename T>
     }
 
     auto end = std::chrono::steady_clock::now();
-    bfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+    bfs_time +=
+        std::chrono::duration_cast<std::chrono::duration<double>>(end - start)
+            .count();
     return foundSink;
   }
   void increment(int node) {
@@ -275,13 +285,17 @@ template<typename T>
       this->vertices[neigh].parent = nodeInd;
       if (neigh == SINK) {
         auto end = std::chrono::steady_clock::now();
-        dfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+        dfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start)
+                        .count();
         return true;
       }
       stack.push(neigh);
     }
     auto end = std::chrono::steady_clock::now();
-    dfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+    dfs_time +=
+        std::chrono::duration_cast<std::chrono::duration<double>>(end - start)
+            .count();
     return false;
   }
 
@@ -291,7 +305,6 @@ template<typename T>
     stack.push(SOURCE);
     while (!stack.empty()) {
       int nodeInd = stack.top();
-      // printf("%d\n", nodeInd);
       stack.pop();
       if (visited[nodeInd])
         continue;
@@ -300,8 +313,6 @@ template<typename T>
         assert(this->neighbors[nodeInd][neigh].cap >= 0);
         if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0)
           continue;
-        // printf("src: %d, dst: %d, cap: %d\n", nodeInd, neigh,
-        //        this->neighbors[nodeInd][neigh].cap);
         this->vertices[neigh].parent = nodeInd;
         stack.push(neigh);
         if (neigh == SINK)
@@ -382,7 +393,6 @@ int main(int argc, char **argv) {
   }
   int n;
   fin >> n;
-  // int n = 5;
   Graph graph(n);
   for (int i = 0; i < n; i++) {
     int cnt;
@@ -397,15 +407,7 @@ int main(int argc, char **argv) {
       graph.addEdge({i}, {neigh}, cap);
     }
   }
-  // graph.addEdge({0}, {2}, 5);
-  // graph.addEdge({0}, {3}, 3);
 
-  // graph.addEdge({2}, {3}, 10);
-  // graph.addEdge({2}, {4}, 3);
-
-  // graph.addEdge({3}, {4}, 10);
-
-  // graph.addEdge({4}, {1}, 10);
   std::unordered_map<Vertex, Edge> src_map;
 
   /*
@@ -418,6 +420,7 @@ int main(int argc, char **argv) {
       std::chrono::duration_cast<std::chrono::duration<double>>(
           std::chrono::steady_clock::now() - init_start)
           .count();
+  return 0;
   const auto compute_start = std::chrono::steady_clock::now();
   while (graph.bfs()) {
     // printf("Did a BFS\n");
@@ -449,10 +452,8 @@ int main(int argc, char **argv) {
     // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
   }
-  // std::cout << "\n\n";
   for (int src = 1; src < n; src++) {
     auto edge = graph.neighbors[src][SOURCE];
-    // std::cout << src << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow -= std::max(0, edge.initial_cap - edge.cap);
   }
   const double compute_time =
@@ -466,23 +467,5 @@ int main(int argc, char **argv) {
   printf("DFS time %f\n", dfs_time);
   printf("Flow value %d\n", flow);
 
-  // graph.printEdgesVisualized();
-
-  /*
-
-    s -> a
-
-  */
-  /*
-  2. Run DFS on the level graph
-    a. have pointer/iterator to edge for each vertex, increment on dead edge
-    b. loop and update aug graph accordingly
-      - dead edges happen when DFS does not reach destination
-      - when going back, increment pointer for edge and try again
-      - when find a path to destination, subtract the minimum flow of any edge
-  on the path
-  */
-
-  // Get blocking flow (recursive)
   return 0;
 }
