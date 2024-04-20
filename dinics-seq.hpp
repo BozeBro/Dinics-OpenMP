@@ -1,5 +1,6 @@
 #pragma once
 #include <limits>
+#include <ostream>
 #include <unordered_map>
 #include <vector>
 #define UNSET std::numeric_limits<int>::max()
@@ -33,9 +34,12 @@ template <> struct hash<Vertex> {
 } // namespace std
 
 struct Graph {
+  double bfs_time = 0;
+  double dfs_time = 0;
 
   std::vector<Vertex> vertices;
   std::vector<std::unordered_map<int, Edge>> neighbors;
+
   Graph(int size);
   void printEdges();
   void printEdgesVisualized();
@@ -50,4 +54,14 @@ struct Graph {
   bool dfs();
   void addEdge(const Vertex &start, const Vertex &end, int cap);
   void reset();
+  void dinicsAlgo();
+  friend std::ostream &operator<<(std::ostream &os, const Graph &graph);
 };
+
+bool operator==(const Vertex &a, const Vertex &b);
+// {
+//   return a.index == b.index && a.current_edge == b.current_edge &&
+//          a.layer == b.layer;
+// }
+bool operator!=(const Vertex &a, const Vertex &b); /* { return !(a == b); } */
+std::ostream &operator<<(std::ostream &os, const Graph &graph);

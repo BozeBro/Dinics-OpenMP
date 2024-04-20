@@ -10,21 +10,15 @@ Be able to change flow of Forward and Backward Edge Easily
 Be able to run BFS and DFS through it in a simple way
 
 */
-#include <cstdlib>
-
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <cstdio>
-#include <cstring>
-#include <fstream>
 #include <iostream>
 #include <limits>
 #include <omp.h>
 #include <ostream>
 #include <queue>
 #include <stack>
-#include <string>
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
@@ -40,9 +34,6 @@ Be able to run BFS and DFS through it in a simple way
 // If it's not defined, define PRINTF as an empty macro
 #define PRINTF(format, ...) ((void)0)
 #endif
-
-static double bfs_time = 0;
-static double dfs_time = 0;
 
 bool operator==(const Vertex &a, const Vertex &b) {
   return a.index == b.index && a.current_edge == b.current_edge &&
@@ -365,124 +356,26 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
   return os;
 }
 
-int main(int argc, char **argv) {
-
-  // Generate graph from input
-  // first two are src, dst
-  // src: 0
-  // dst: 1
-  // nodes 2,3
-  // src -5-> [2,3] -5-> dstVert
-  omp_set_num_threads(1);
-  const auto init_start = std::chrono::steady_clock::now();
-  std::string input_filename;
-  char mode = '\0';
-  int num_threads = 0;
-  int opt;
-  while ((opt = getopt(argc, argv, "f:n:m:")) != -1) {
-    switch (opt) {
-    case 'f':
-      input_filename = optarg;
-      break;
-    case 'n':
-      num_threads = atoi(optarg);
-      break;
-    case 'm':
-      mode = *optarg;
-      break;
-
-    default:
-      std::cerr << "Usage: " << argv[0]
-                << " -f input_filename -n num_threads -m parallel_mode -b "
-                   "batch_size\n";
-      exit(EXIT_FAILURE);
-    }
-  }
-  if (empty(input_filename)) {
-    std::cerr << "Usage: " << argv[0]
-              << " -f input_filename -n num_threads "
-                 "-m parallel_mode\n";
-    exit(EXIT_FAILURE);
-  }
-
-  std::ifstream fin(input_filename);
-  if (!fin) {
-    std::cerr << "Unable to open file: " << input_filename << ".\n";
-    exit(EXIT_FAILURE);
-  }
-  int n;
-  fin >> n;
-  Graph graph(n);
-  for (int i = 0; i < n; i++) {
-    int cnt;
-    fin >> cnt;
-    if (cnt == 0)
-      continue;
-    graph.neighbors[i].reserve(cnt);
-    int neigh, cap;
-    for (int j = 0; j < cnt; j++) {
-      fin >> neigh >> cap;
-
-      graph.addEdge({i}, {neigh}, cap);
-    }
-  }
-
-  std::unordered_map<Vertex, Edge> src_map;
-
-  /*
-    Make the layer graph BFS
-    1. Run BFS on the graph
-      a. notate level of each vertex in the graph.
-      b. construct lists for "next vertex" for Blocking Flow
-  */
-  const double init_time =
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          std::chrono::steady_clock::now() - init_start)
-          .count();
-  const auto compute_start = std::chrono::steady_clock::now();
-  // graph.printEdgesVisualized();
-  // exit(0);
-  while (graph.bfs()) {
+void Graph::dinicsAlgo() {
+  while (bfs()) {
     // PRINTF("Did a BFS\n");
 
-    // graph.printEdges();
-    while (graph.dfsDeadEdge()) {
+    // printEdges();
+    while (dfsDeadEdge()) {
       // PRINTF("Finished dfs iteration\n");
-      Vertex &dstVert = graph.vertices[SINK];
+      Vertex &dstVert = vertices[SINK];
       int minCapacity = UNSET;
-      for (Vertex cur = dstVert; cur != graph.vertices[SOURCE];
-           cur = graph.vertices[cur.parent]) {
+      for (Vertex cur = dstVert; cur != vertices[SOURCE];
+           cur = vertices[cur.parent]) {
         minCapacity =
-            std::min(minCapacity, graph.neighbors[cur.parent][cur.index].cap);
+            std::min(minCapacity, neighbors[cur.parent][cur.index].cap);
       }
-      for (Vertex cur = dstVert; cur != graph.vertices[SOURCE];
-           cur = graph.vertices[cur.parent]) {
-        graph.neighbors[cur.parent][cur.index].cap -= minCapacity;
-        graph.neighbors[cur.index][cur.parent].cap += minCapacity;
+      for (Vertex cur = dstVert; cur != vertices[SOURCE];
+           cur = vertices[cur.parent]) {
+        neighbors[cur.parent][cur.index].cap -= minCapacity;
+        neighbors[cur.index][cur.parent].cap += minCapacity;
       }
     }
-    graph.reset();
+    reset();
   }
-  int flow = 0;
-
-  for (auto [i, edge] : graph.neighbors[SOURCE]) {
-    // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
-    flow += edge.initial_cap - edge.cap;
-  }
-  for (int src = 1; src < n; src++) {
-    auto edge = graph.neighbors[src][SOURCE];
-    flow -= std::max(0, edge.initial_cap - edge.cap);
-  }
-  const double compute_time =
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          std::chrono::steady_clock::now() - compute_start)
-          .count();
-  printf("Compute time %f\n", compute_time);
-  printf("Init time %f\n", init_time);
-  printf("Total time %f\n", compute_time + init_time);
-  printf("BFS time %f\n", bfs_time);
-  printf("DFS time %f\n", dfs_time);
-  printf("Flow value %d\n", flow);
-
-  return 0;
 }
