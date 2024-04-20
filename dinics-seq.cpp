@@ -131,31 +131,45 @@ struct Graph {
     std::vector<int> visited(this->vertices.size(), 0);
     // initialize current frontier
     std::vector<int> frontier{SOURCE};
-    std::vector<int> newFrontier(this->vertices.size());
+    this->vertices[SOURCE].layer = 0;
+    int *newFrontier = new int[this->vertices.size()];
+    for (int i = 0; i < this->vertices.size(); i++) {
+      newFrontier[i] = -1;
+    }
     int size;
-    int lastWrite;
-    // initialize threads
-    // Per iteration:
-    while (!frontier.empty()) {
-      bool found = false;
-      newFrontier.reserve(this->vertices.size());
+    int lastWrite = 0;
+    // // initialize threads
+    // // Per iteration:
+    // printf("size: %d\n", this->neighbors[SOURCE].size());
+    // for (auto [ind, dst] : this->neighbors[SOURCE]) {
+    //   printf("%d ", ind);
+    // }
+    // printf("\n");
+    bool found = false;
+    while (!frontier.empty() && !found) {
       size = 0;
       lastWrite = 0;
 
-      // std::vector<int> localFrontier;
       std::vector<int> localFrontier;
-      // #pragma omp threadprivate(localFrontier)
-
+      if (frontier.size() != 10)
+        printf("%zu\n", frontier.size());
 #pragma omp parallel shared(newFrontier, frontier, lastWrite, found, visited)  \
     firstprivate(localFrontier)
       {
 
-        // initialize local frontier
-
-#pragma omp parallel for reduction(+ : size)
+#pragma omp parallel for
         for (int i = 0; i < frontier.size(); i++) {
           int index = frontier[i];
+          if (!(0 <= index && index < this->vertices.size())) {
+            printf("index is %d\n", index);
+            abort();
+          }
           for (const auto [neigh, edge] : this->neighbors[index]) {
+            Vertex &srcVert = this->vertices[index];
+            Vertex &dstVert = this->vertices[neigh];
+            if (!isLayerReachable(srcVert, dstVert)) {
+              continue;
+            }
             bool edited = true;
 #pragma omp atomic capture
             {
@@ -163,13 +177,16 @@ struct Graph {
               visited[neigh] = true;
             }
             if (!edited) {
-              if (index == SINK)
+              if (neigh == SINK) {
+                printf("done\n");
                 found = true;
-              Vertex &srcVert = this->vertices[index];
-              Vertex &dstVert = this->vertices[neigh];
-              if (visitVertex(srcVert, dstVert, visited))
+              }
+
+              assert(visited[dstVert.index]);
+              if (visitVertex(srcVert, dstVert)) {
+                printf("adding vertex %d\n", dstVert.index);
                 localFrontier.push_back(neigh);
-              size += 1;
+              }
             }
           }
         }
@@ -179,14 +196,34 @@ struct Graph {
           startIndex = lastWrite;
           lastWrite += localFrontier.size();
         }
-        memcpy(newFrontier.data() + startIndex * sizeof(int),
-               localFrontier.data(), sizeof(int) * localFrontier.size());
+        assert(startIndex >= 0);
+        assert(startIndex < this->vertices.size());
+
+        if (localFrontier.size() > 0)
+          printf("Start localFrontier print %d\n", omp_get_thread_num());
+        for (int k = 0; k < localFrontier.size(); k++) {
+          printf("%d ", startIndex + k);
+          assert(k >= 0 && k < this->vertices.size());
+          newFrontier[startIndex + k] = localFrontier[k];
+        }
+        if (localFrontier.size() > 0)
+          printf("\n End local Frontier print\n");
+        // memcpy(newFrontier + startIndex * sizeof(int),
+        //        localFrontier.data(), sizeof(int) * localFrontier.size());
       }
-      if (found)
-        return true;
-      frontier = newFrontier;
+      printf("newFrontier %d\n", lastWrite);
+      for (int i = 0; i < this->vertices.size(); i++) {
+        printf("%d ", newFrontier[i]);
+      }
+      printf("\n");
+      printf("Size is %d\n", lastWrite);
+      frontier.resize(lastWrite);
+      for (int i = 0; i < lastWrite; i++) {
+        frontier[i] = newFrontier[i];
+      }
     }
-    return false;
+    delete[] newFrontier;
+    return found;
   }
 
   // bool visitVertex(Vertex& srcVert, Vertex& dstVert, const std::vector<int>&
@@ -207,13 +244,21 @@ struct Graph {
   //   }
   //   return false;
   // }
-  template <typename T>
-  bool visitVertex(Vertex &srcVert, Vertex &dstVert,
-                   const std::vector<T> &visited) {
-    if (dstVert.layer <= srcVert.layer || visited[dstVert.index] ||
-        this->neighbors[srcVert.index][dstVert.index].cap == 0)
+  bool isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
+    if (dstVert.layer <= srcVert.layer ||
+        this->neighbors[srcVert.index][dstVert.index].cap == 0) {
+      printf("dst layer: %d src layer: %d capacity %d\n", dstVert.layer,
+             srcVert.layer, this->neighbors[srcVert.index][dstVert.index].cap);
+      // printf("capacity %d\n",
+      // this->neighbors[srcVert.index][dstVert.index].cap);
+      printf("Fail here %d->%d\n", srcVert.index, dstVert.index);
       return false;
+    }
+    return true;
+  }
+  bool visitVertex(Vertex &srcVert, Vertex &dstVert) {
     srcVert.layered_dst.push_back(dstVert.index);
+    printf("is layer set? %d\n", dstVert.layer == UNSET);
     if (dstVert.layer == UNSET) {
       // frontier.push(dstVert.index);
       dstVert.layer = srcVert.layer + 1;
@@ -243,7 +288,8 @@ struct Graph {
       Vertex &srcVert = this->vertices[src];
       for (auto &[dst, edge] : this->neighbors[src]) {
         Vertex &dstVert = this->vertices[dst];
-        if (visitVertex(srcVert, dstVert, visited)) {
+        if (!visited[dstVert.index] && isLayerReachable(srcVert, dstVert) &&
+            visitVertex(srcVert, dstVert)) {
           frontier.push(dst);
         }
       }
@@ -355,6 +401,7 @@ int main(int argc, char **argv) {
   // dst: 1
   // nodes 2,3
   // src -5-> [2,3] -5-> dstVert
+  omp_set_num_threads(10);
   const auto init_start = std::chrono::steady_clock::now();
   std::string input_filename;
   char mode = '\0';
@@ -420,10 +467,12 @@ int main(int argc, char **argv) {
       std::chrono::duration_cast<std::chrono::duration<double>>(
           std::chrono::steady_clock::now() - init_start)
           .count();
-  return 0;
   const auto compute_start = std::chrono::steady_clock::now();
-  while (graph.bfs()) {
+  // graph.printEdgesVisualized();
+  // exit(0);
+  while (graph.bfsParallel()) {
     // printf("Did a BFS\n");
+
     // graph.printEdges();
     while (graph.dfsDeadEdge()) {
       // printf("Finished dfs iteration\n");
