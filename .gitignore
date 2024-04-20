@@ -6,3 +6,6 @@ compile_commands.json
 .idea/
 out/
 testinput/bigInput*.txt
+*.dSYM
+out*
+.DS_Store

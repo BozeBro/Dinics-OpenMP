@@ -1,6 +1,0 @@
-Compute time 0.000685
-Init time 0.001448
-Total time 0.002133
-BFS time 0.000417
-DFS time 0.000000
-Flow value 0
