@@ -1,4 +1,6 @@
-#pragma once
+#ifndef DINICS_SEQ_HPP
+#define DINICS_SEQ_HPP
+
 #include <limits>
 #include <ostream>
 #include <unordered_map>
@@ -6,6 +8,15 @@
 #define UNSET std::numeric_limits<int>::max()
 #define SOURCE 0
 #define SINK 1
+// #define MY_PRINT_ENABLED
+#ifdef MY_PRINT_ENABLED
+// If it's defined, define PRINTF as printf
+#define PRINTF(format, ...) printf(format, ##__VA_ARGS__)
+#else
+// If it's not defined, define PRINTF as an empty macro
+#define PRINTF(format, ...) ((void)0)
+#endif
+
 struct Edge {
   int cap;
   int initial_cap;
@@ -65,3 +76,4 @@ bool operator==(const Vertex &a, const Vertex &b);
 // }
 bool operator!=(const Vertex &a, const Vertex &b); /* { return !(a == b); } */
 std::ostream &operator<<(std::ostream &os, const Graph &graph);
+#endif // !DINICS_SEQ_HPP

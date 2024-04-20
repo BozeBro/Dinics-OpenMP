@@ -14,7 +14,6 @@ Be able to run BFS and DFS through it in a simple way
 #include <cassert>
 #include <chrono>
 #include <iostream>
-#include <limits>
 #include <omp.h>
 #include <ostream>
 #include <queue>
@@ -22,18 +21,6 @@ Be able to run BFS and DFS through it in a simple way
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-
-#define UNSET std::numeric_limits<int>::max()
-#define SOURCE 0
-#define SINK 1
-// #define MY_PRINT_ENABLED
-#ifdef MY_PRINT_ENABLED
-// If it's defined, define PRINTF as printf
-#define PRINTF(format, ...) printf(format, ##__VA_ARGS__)
-#else
-// If it's not defined, define PRINTF as an empty macro
-#define PRINTF(format, ...) ((void)0)
-#endif
 
 bool operator==(const Vertex &a, const Vertex &b) {
   return a.index == b.index && a.current_edge == b.current_edge &&

@@ -1,4 +1,5 @@
 #include "dinics-seq.hpp"
+#include "mgraph.hpp"
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -54,22 +55,24 @@ int main(int argc, char **argv) {
   }
   int n;
   fin >> n;
-  Graph graph(n);
+  MGraph graph(n);
   for (int i = 0; i < n; i++) {
     int cnt;
     fin >> cnt;
     if (cnt == 0)
       continue;
-    graph.neighbors[i].reserve(cnt);
+    // graph.adj_list[i].reserve(cnt);
     int neigh, cap;
     for (int j = 0; j < cnt; j++) {
       fin >> neigh >> cap;
 
-      graph.addEdge({i}, {neigh}, cap);
+      Vertex a{i};
+      Vertex b{neigh};
+      graph.addEdge(a, b, cap);
     }
   }
-
-  std::unordered_map<Vertex, Edge> src_map;
+  // graph.printEdgesVisualized();
+  // exit(0);
 
   /*
     Make the layer graph BFS
@@ -88,12 +91,13 @@ int main(int argc, char **argv) {
 
   int flow = 0;
 
-  for (auto [i, edge] : graph.neighbors[SOURCE]) {
+  for (Edge edge : graph.neighbors[SOURCE]) {
     // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
+    // flow += i - edge;
   }
   for (int src = 1; src < n; src++) {
-    auto edge = graph.neighbors[src][SOURCE];
+    Edge edge = graph.neighbors[src][SOURCE];
     flow -= std::max(0, edge.initial_cap - edge.cap);
   }
   const double compute_time =
