@@ -4,7 +4,7 @@ message( "$ENV{CXX}")
 
 project(Dinics)
 
-set(MODE "-g")
+set(MODE "-O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fopenmp ${MODE}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
