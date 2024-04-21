@@ -4,13 +4,13 @@
 
 #include "dinics-seq.hpp"
 #include <vector>
+#include <unordered_map>
 
 struct MGraph {
   double bfs_time = 0;
   double dfs_time = 0;
-
   std::vector<Vertex> vertices;
-  std::vector<std::vector<Edge>> neighbors;
+  std::vector<std::unordered_map<int, Edge>> neighbors;
   std::vector<std::vector<int>> adj_list;
   MGraph(int size);
   bool bfsParallel();
@@ -22,5 +22,6 @@ struct MGraph {
   void reset();
   void addEdge(const Vertex &start, const Vertex &end, int cap);
   void printEdgesVisualized();
+  bool bfsStep(std::vector<bool> &visited, int step);
 };
 #endif // !MGRAPH_HPP

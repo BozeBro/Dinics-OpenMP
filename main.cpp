@@ -16,7 +16,6 @@ int main(int argc, char **argv) {
   // dst: 1
   // nodes 2,3
   // src -5-> [2,3] -5-> dstVert
-  omp_set_num_threads(1);
   const auto init_start = std::chrono::steady_clock::now();
   std::string input_filename;
   char mode = '\0';
@@ -47,6 +46,7 @@ int main(int argc, char **argv) {
                  "-m parallel_mode\n";
     exit(EXIT_FAILURE);
   }
+    omp_set_num_threads(num_threads);
 
   std::ifstream fin(input_filename);
   if (!fin) {
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 
   int flow = 0;
 
-  for (Edge edge : graph.neighbors[SOURCE]) {
+  for (auto [_, edge] : graph.neighbors[SOURCE]) {
     // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
     // flow += i - edge;

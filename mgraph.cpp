@@ -3,7 +3,6 @@
 #include <cassert>
 #include <chrono>
 // #include <omp.h>
-#include <queue>
 #include <stack>
 #include <vector>
 void MGraph::printEdgesVisualized() {
@@ -20,7 +19,7 @@ void MGraph::printEdgesVisualized() {
 }
 
 MGraph::MGraph(int size)
-    : vertices(size), neighbors(size, std::vector<Edge>(size)), adj_list(size) {
+    : vertices(size), neighbors(size), adj_list(size) {
   for (int i = 0; i < size; i++) {
     vertices[i].index = i;
   }
@@ -42,62 +41,50 @@ bool MGraph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   }
   return true;
 }
+
+bool MGraph::bfsStep(std::vector<bool> &visited, int step) {
+  bool sz = false;
+  #pragma omp parallel for reduction(| : sz)
+  for (int i = 0; i < visited.size(); i++) {
+    if (this->vertices[i].layer != step)
+      continue;
+    for (int neigh = 0; neigh < this->adj_list[i].size(); neigh++) {
+
+      int neighInd = this->adj_list[i][neigh];
+      Vertex &dstVert = this->vertices[neighInd];
+      Vertex &srcVert = this->vertices[i];
+      if (visited[neighInd] || !isLayerReachable(srcVert, dstVert)) {
+        continue;
+      }
+      
+      if (visited[neighInd]) {
+        continue;
+      }
+      visited[neighInd] = true;
+      dstVert.layer = step + 1;
+      sz |= true;
+    }
+  }
+  return sz;
+}
 bool MGraph::bfsParallel() {
   auto start = std::chrono::steady_clock::now();
   bool foundSink = false;
-  std::queue<int> frontier;
   std::vector<bool> visited(this->vertices.size(), false);
+  visited[SOURCE] = true;
   this->vertices[SOURCE].layer = 0;
-  frontier.push(SOURCE);
-  while (!frontier.empty()) {
-    int src = frontier.front();
-    frontier.pop();
-    if (visited[src] == true) {
-      continue;
-    }
-    assert(!visited[src]);
-    visited[src] = true;
-    if (src == SINK)
-      foundSink = true;
-    Vertex &srcVert = this->vertices[src];
-    std::vector<int> valid(adj_list[srcVert.index].size(), 0);
-    int sz = 0;
-    // #pragma omp parallel for
-    for (int i = 0; i < this->adj_list[srcVert.index].size(); i++) {
-      int neigh = adj_list[srcVert.index][i];
-      Vertex &dstVert = this->vertices[neigh];
-      if (!visited[dstVert.index] && isLayerReachable(srcVert, dstVert) &&
-          visitVertexParallel(srcVert, dstVert)) {
-        dstVert.layer = srcVert.layer + 1;
-        valid[i] = 1;
-      }
-    }
-    for (int i = 0; i < adj_list[srcVert.index].size(); i++) {
-      if (valid[i])
-        frontier.push(this->adj_list[srcVert.index][i]);
-    }
-    std::queue<int> save;
-    if (frontier.empty())
-      continue;
-    PRINTF("START PRINTING\n");
-    while (!frontier.empty()) {
-      int i = frontier.front();
-      frontier.pop();
-      save.push(i);
-      PRINTF("%d ", i);
-    }
-    while (!save.empty()) {
-      frontier.push(save.front());
-      save.pop();
-    }
-    PRINTF("\n FINISHED \n");
+  bool seen = true;
+  int step = 0;
+  while (seen && !visited[SINK]) {
+
+    seen = bfsStep(visited, step++);
   }
   auto end = std::chrono::steady_clock::now();
   bfs_time +=
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start)
           .count();
 
-  return foundSink;
+  return visited[SINK];
 }
 bool MGraph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
 
