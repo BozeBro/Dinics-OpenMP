@@ -63,7 +63,17 @@ struct Graph {
   void increment(int node);
   bool dfsDeadEdge();
   bool dfs();
-  void addEdge(const Vertex &start, const Vertex &end, int cap);
+
+  inline void addEdge(const Vertex &start, const Vertex &end, int cap) {
+    // Max prevent capacity override if there are 2 node cycles
+    int cap_value = std::max(neighbors[start.index][end.index].cap, cap);
+    neighbors[start.index][end.index] = {cap_value, cap_value};
+    cap_value = std::max(neighbors[end.index][start.index].cap, 0);
+    neighbors[end.index][start.index] = {cap_value, cap_value};
+    // neighbors[end.index][start.index].cap =
+    //     std::max(neighbors[end.index][start.index].cap, 0);
+  }
+
   void reset();
   void dinicsAlgo();
   friend std::ostream &operator<<(std::ostream &os, const Graph &graph);

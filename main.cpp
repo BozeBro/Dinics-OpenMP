@@ -1,5 +1,5 @@
 #include "dinics-seq.hpp"
-#include "mgraph.hpp"
+// #include "mgraph.hpp"
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   }
   int n;
   fin >> n;
-  MGraph graph(n);
+  Graph graph(n);
   for (int i = 0; i < n; i++) {
     int cnt;
     fin >> cnt;
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 
   int flow = 0;
 
-  for (Edge edge : graph.neighbors[SOURCE]) {
+  for (auto [_, edge] : graph.neighbors[SOURCE]) {
     // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
     flow += edge.initial_cap - edge.cap;
     // flow += i - edge;

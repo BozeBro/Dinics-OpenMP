@@ -86,13 +86,6 @@ bool Graph::bfsParallel() {
   }
   int size;
   int lastWrite = 0;
-  // // initialize threads
-  // // Per iteration:
-  // PRINTF("size: %d\n", this->neighbors[SOURCE].size());
-  // for (auto [ind, dst] : this->neighbors[SOURCE]) {
-  //   PRINTF("%d ", ind);
-  // }
-  // PRINTF("\n");
   bool found = false;
   while (!frontier.empty() && !found) {
     size = 0;
@@ -101,11 +94,11 @@ bool Graph::bfsParallel() {
     std::vector<int> localFrontier;
     if (frontier.size() != 10)
       PRINTF("%zu\n", frontier.size());
-#pragma omp parallel shared(newFrontier, frontier, lastWrite, found, visited)  \
-    firstprivate(localFrontier)
+// #pragma omp parallel shared(newFrontier, frontier, lastWrite, found, visited)  \
+    // firstprivate(localFrontier)
     {
 
-#pragma omp parallel for
+// #pragma omp parallel for
       for (int i = 0; i < frontier.size(); i++) {
         int index = frontier[i];
         if (!(0 <= index && index < this->vertices.size())) {
@@ -119,7 +112,7 @@ bool Graph::bfsParallel() {
             continue;
           }
           bool edited = true;
-#pragma omp atomic capture
+// #pragma omp atomic capture
           {
             edited = visited[neigh];
             visited[neigh] = true;
@@ -130,16 +123,17 @@ bool Graph::bfsParallel() {
               found = true;
             }
 
-            assert(visited[dstVert.index]);
+//             assert(visited[dstVert.index]);
             if (visitVertexParallel(srcVert, dstVert)) {
-              PRINTF("adding vertex %d\n", dstVert.index);
+//               PRINTF("adding vertex %d\n", dstVert.index);
               localFrontier.push_back(neigh);
             }
           }
         }
+      
       }
       int startIndex = -1;
-#pragma omp atomic capture
+// #pragma omp atomic capture
       {
         startIndex = lastWrite;
         lastWrite += localFrontier.size();
@@ -154,17 +148,17 @@ bool Graph::bfsParallel() {
         assert(k >= 0 && k < this->vertices.size());
         newFrontier[startIndex + k] = localFrontier[k];
       }
-      if (localFrontier.size() > 0)
-        PRINTF("\n End local Frontier print\n");
-      // memcpy(newFrontier + startIndex * sizeof(int),
-      //        localFrontier.data(), sizeof(int) * localFrontier.size());
+    //   if (localFrontier.size() > 0)
+    //     PRINTF("\n End local Frontier print\n");
+    //   memcpy(newFrontier + startIndex * sizeof(int),
+    //          localFrontier.data(), sizeof(int) * localFrontier.size());
     }
-    PRINTF("newFrontier %d\n", lastWrite);
-    for (int i = 0; i < this->vertices.size(); i++) {
-      PRINTF("%d ", newFrontier[i]);
-    }
-    PRINTF("\n");
-    PRINTF("Size is %d\n", lastWrite);
+    // PRINTF("newFrontier %d\n", lastWrite);
+    // for (int i = 0; i < this->vertices.size(); i++) {
+    //   PRINTF("%d ", newFrontier[i]);
+    // }
+    // PRINTF("\n");
+    // PRINTF("Size is %d\n", lastWrite);
     frontier.resize(lastWrite);
     for (int i = 0; i < lastWrite; i++) {
       frontier[i] = newFrontier[i];
@@ -191,7 +185,7 @@ bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   return true;
 }
 bool Graph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
-#pragma omp critical
+// #pragma omp critical
   { srcVert.layered_dst.push_back(dstVert.index); }
 
   PRINTF("is layer set? %d\n", dstVert.layer == UNSET);
@@ -319,16 +313,6 @@ bool Graph::dfs() {
   return false;
 }
 
-void Graph::addEdge(const Vertex &start, const Vertex &end, int cap) {
-  // Max prevent capacity override if there are 2 node cycles
-  int cap_value = std::max(neighbors[start.index][end.index].cap, cap);
-  neighbors[start.index][end.index] = {cap_value, cap_value};
-  cap_value = std::max(neighbors[end.index][start.index].cap, 0);
-  neighbors[end.index][start.index] = {cap_value, cap_value};
-  // neighbors[end.index][start.index].cap =
-  //     std::max(neighbors[end.index][start.index].cap, 0);
-}
-
 void Graph::reset() {
   for (Vertex &v : this->vertices) {
     v.reset();
@@ -344,7 +328,7 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
 }
 
 void Graph::dinicsAlgo() {
-  while (bfs()) {
+  while (bfsParallel()) {
     // PRINTF("Did a BFS\n");
 
     // printEdges();
