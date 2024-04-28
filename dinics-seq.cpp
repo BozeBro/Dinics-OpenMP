@@ -117,17 +117,15 @@ bool Graph::bfsParallel() {
             edited = visited[neigh];
             visited[neigh] = true;
           }
-          if (!edited) {
-            if (neigh == SINK) {
-              PRINTF("done\n");
-              found = true;
-            }
+          if (neigh == SINK) {
+            PRINTF("done\n");
+            found = true;
+          }
 
 //             assert(visited[dstVert.index]);
-            if (visitVertexParallel(srcVert, dstVert)) {
+          if (visitVertexParallel(srcVert, dstVert)) {
 //               PRINTF("adding vertex %d\n", dstVert.index);
-              localFrontier.push_back(neigh);
-            }
+            localFrontier.push_back(neigh);
           }
         }
       
