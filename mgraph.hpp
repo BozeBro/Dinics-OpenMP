@@ -3,8 +3,8 @@
 #define MGRAPH_HPP
 
 #include "dinics-seq.hpp"
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 struct MGraph {
   double bfs_time = 0;
@@ -22,6 +22,6 @@ struct MGraph {
   void reset();
   void addEdge(const Vertex &start, const Vertex &end, int cap);
   void printEdgesVisualized();
-  bool bfsStep(std::vector<bool> &visited, int step);
+  bool bfsStep(std::vector<bool> &visited, std::vector<int> &sizes, int step);
 };
 #endif // !MGRAPH_HPP

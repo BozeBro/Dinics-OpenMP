@@ -18,8 +18,7 @@ void MGraph::printEdgesVisualized() {
   PRINTF("}\n");
 }
 
-MGraph::MGraph(int size)
-    : vertices(size), neighbors(size), adj_list(size) {
+MGraph::MGraph(int size) : vertices(size), neighbors(size), adj_list(size) {
   for (int i = 0; i < size; i++) {
     vertices[i].index = i;
   }
@@ -42,9 +41,10 @@ bool MGraph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   return true;
 }
 
-bool MGraph::bfsStep(std::vector<bool> &visited, int step) {
+bool MGraph::bfsStep(std::vector<bool> &visited, std::vector<int> &sizes,
+                     int step) {
   bool sz = false;
-  #pragma omp parallel for reduction(| : sz)
+#pragma omp parallel for reduction(| : sz)
   for (int i = 0; i < visited.size(); i++) {
     if (this->vertices[i].layer != step)
       continue;
@@ -53,18 +53,32 @@ bool MGraph::bfsStep(std::vector<bool> &visited, int step) {
       int neighInd = this->adj_list[i][neigh];
       Vertex &dstVert = this->vertices[neighInd];
       Vertex &srcVert = this->vertices[i];
-      if (visited[neighInd] || !isLayerReachable(srcVert, dstVert)) {
+      if (dstVert.layer <= step || !isLayerReachable(srcVert, dstVert) ||
+          !visitVertexParallel(srcVert, dstVert)) {
         continue;
       }
-      
-      if (visited[neighInd]) {
-        continue;
-      }
+
+      sizes[i]++;
       visited[neighInd] = true;
       dstVert.layer = step + 1;
+      // srcVert.layered_dst.push_back(neighInd);
       sz |= true;
     }
   }
+  // #pragma omp parallel for
+  //   for (int i = 0; i < visited.size(); i++) {
+  //     if (this->vertices[i].layer != step || sizes[i] == 0)
+  //       continue;
+  //     this->vertices[i].layered_dst.reserve(sizes[i]);
+  //     for (int neigh = 0; neigh < this->adj_list[i].size(); neigh++) {
+  //       int neighInd = this->adj_list[i][neigh];
+  //       Vertex &dstVert = this->vertices[neighInd];
+  //       if (dstVert.layer != step + 1)
+  //         continue;
+  //       this->vertices[i].layered_dst.push_back(neighInd);
+  //     }
+  //   }
+
   return sz;
 }
 bool MGraph::bfsParallel() {
@@ -73,11 +87,12 @@ bool MGraph::bfsParallel() {
   std::vector<bool> visited(this->vertices.size(), false);
   visited[SOURCE] = true;
   this->vertices[SOURCE].layer = 0;
+  std::vector<int> neighSizes(this->vertices.size(), 0);
   bool seen = true;
   int step = 0;
   while (seen && !visited[SINK]) {
 
-    seen = bfsStep(visited, step++);
+    seen = bfsStep(visited, neighSizes, step++);
   }
   auto end = std::chrono::steady_clock::now();
   bfs_time +=
@@ -108,6 +123,7 @@ bool MGraph::dfsDeadEdge() {
     int nodeInd = stack.top();
     Vertex &srcVert = this->vertices[nodeInd];
     visited[nodeInd] = true;
+    // auto &neighborEdges = this->vertices[nodeInd].layered_dst;
     auto &neighborEdges = this->adj_list[nodeInd];
     if (srcVert.current_edge == neighborEdges.size()) {
       stack.pop();
@@ -115,11 +131,10 @@ bool MGraph::dfsDeadEdge() {
       continue;
     }
     assert(srcVert.current_edge < neighborEdges.size());
-    int neigh = this->adj_list[nodeInd][srcVert.current_edge];
+    int neigh = neighborEdges[srcVert.current_edge];
     Vertex &dstVert = this->vertices[neigh];
-    // Vertex &dstVert = this->vertices[neigh];
-    if (dstVert.layer <= srcVert.layer || visited[neigh] ||
-        this->neighbors[nodeInd][neigh].cap == 0) {
+    if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0 ||
+        dstVert.layer <= srcVert.layer) {
       increment(nodeInd);
       continue;
     }

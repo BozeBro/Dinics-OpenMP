@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <omp.h>
+#include <ostream>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
                  "-m parallel_mode\n";
     exit(EXIT_FAILURE);
   }
-    omp_set_num_threads(num_threads);
+  omp_set_num_threads(num_threads);
 
   std::ifstream fin(input_filename);
   if (!fin) {
@@ -55,7 +56,8 @@ int main(int argc, char **argv) {
   }
   int n;
   fin >> n;
-  MGraph graph(n);
+  Graph graph(n);
+
   for (int i = 0; i < n; i++) {
     int cnt;
     fin >> cnt;
