@@ -53,31 +53,17 @@ bool MGraph::bfsStep(std::vector<bool> &visited, std::vector<int> &sizes,
       int neighInd = this->adj_list[i][neigh];
       Vertex &dstVert = this->vertices[neighInd];
       Vertex &srcVert = this->vertices[i];
-      if (dstVert.layer <= step || !isLayerReachable(srcVert, dstVert) ||
-          !visitVertexParallel(srcVert, dstVert)) {
+      if (dstVert.layer <= step || !isLayerReachable(srcVert, dstVert)) {
         continue;
       }
 
       sizes[i]++;
       visited[neighInd] = true;
       dstVert.layer = step + 1;
-      // srcVert.layered_dst.push_back(neighInd);
+      srcVert.layered_dst.push_back(neighInd);
       sz |= true;
     }
   }
-  // #pragma omp parallel for
-  //   for (int i = 0; i < visited.size(); i++) {
-  //     if (this->vertices[i].layer != step || sizes[i] == 0)
-  //       continue;
-  //     this->vertices[i].layered_dst.reserve(sizes[i]);
-  //     for (int neigh = 0; neigh < this->adj_list[i].size(); neigh++) {
-  //       int neighInd = this->adj_list[i][neigh];
-  //       Vertex &dstVert = this->vertices[neighInd];
-  //       if (dstVert.layer != step + 1)
-  //         continue;
-  //       this->vertices[i].layered_dst.push_back(neighInd);
-  //     }
-  //   }
 
   return sz;
 }
@@ -123,8 +109,8 @@ bool MGraph::dfsDeadEdge() {
     int nodeInd = stack.top();
     Vertex &srcVert = this->vertices[nodeInd];
     visited[nodeInd] = true;
-    // auto &neighborEdges = this->vertices[nodeInd].layered_dst;
-    auto &neighborEdges = this->adj_list[nodeInd];
+    auto &neighborEdges = this->vertices[nodeInd].layered_dst;
+    // auto &neighborEdges = this->adj_list[nodeInd];
     if (srcVert.current_edge == neighborEdges.size()) {
       stack.pop();
       increment(srcVert.parent);
