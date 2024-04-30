@@ -84,7 +84,7 @@ bool Graph::bfsParallel() {
   bool found = false;
   while (!frontier.empty() && !found) {
     size = 0;  
-    std::vector<int> threadFrontiers[8];
+    std::vector<int> threadFrontiers[MAX_THREADS];
     #pragma omp parallel for
     for (int i = 0; i < frontier.size(); i++) {
       int threadIndex = omp_get_thread_num();
@@ -112,9 +112,10 @@ bool Graph::bfsParallel() {
       }
     }
 
-    int startIndices[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    int startIndices[MAX_THREADS];
+    startIndices[0] = 0;
     int size = threadFrontiers[0].size();
-    for (int i = 1; i < 8; i++) {
+    for (int i = 1; i < MAX_THREADS; i++) {
       startIndices[i] = size;
       size += threadFrontiers[i].size();
     }
@@ -247,7 +248,7 @@ bool Graph::dfsDeadEdge() {
     visited[nodeInd] = true;
     auto &neighborEdges = srcVert.layered_dst_array[srcVert.current_edge_array];
     if (srcVert.current_edge == neighborEdges.size()) {
-      if (srcVert.current_edge_array == 8 - 1) {
+      if (srcVert.current_edge_array == MAX_THREADS - 1) {
         stack.pop();
         increment(srcVert.parent);
       } else {

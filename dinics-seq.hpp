@@ -17,6 +17,8 @@
 #define PRINTF(format, ...) ((void)0)
 #endif
 
+#define MAX_THREADS 8
+
 struct Edge {
   int cap;
   int initial_cap;
@@ -28,7 +30,7 @@ struct Vertex {
   int layer = UNSET;
   int parent = -1;
   std::vector<int> layered_dst;
-  std::vector<int> layered_dst_array[8];
+  std::vector<int> layered_dst_array[MAX_THREADS];
 
   void reset() {
     this->current_edge = 0;
@@ -36,7 +38,7 @@ struct Vertex {
     this->layer = UNSET;
     this->parent = -1;
     this->layered_dst.clear();
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < MAX_THREADS; i++) {
       this->layered_dst_array[i] = std::vector<int>();
     }
   }
