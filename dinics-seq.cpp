@@ -80,71 +80,61 @@ bool Graph::bfsParallel() {
   // initialize current frontier
   std::vector<int> frontier{SOURCE};
   this->vertices[SOURCE].layer = 0;
-  int *newFrontier = new int[this->vertices.size()];
-  for (int i = 0; i < this->vertices.size(); i++) {
-    newFrontier[i] = -1;
-  }
   int size;
-  int lastWrite = 0;
   bool found = false;
   while (!frontier.empty() && !found) {
-    size = 0;
-    lastWrite = 0;
-
-    std::vector<int> localFrontier;
-    if (frontier.size() != 10)
-      PRINTF("%zu\n", frontier.size());
-// #pragma omp parallel shared(newFrontier, frontier, lastWrite, found, visited)  \
-    // firstprivate(localFrontier)
-    {
-
-// #pragma omp parallel for
-      for (int i = 0; i < frontier.size(); i++) {
-        int index = frontier[i];
-        if (!(0 <= index && index < this->vertices.size())) {
-          PRINTF("index is %d\n", index);
-          abort();
+    size = 0;  
+    std::vector<int> threadFrontiers[8];
+    #pragma omp parallel for
+    for (int i = 0; i < frontier.size(); i++) {
+      int threadIndex = omp_get_thread_num();
+      std::vector<int>& localFrontier = threadFrontiers[threadIndex];
+      int index = frontier[i];
+      // if (!(0 <= index && index < this->vertices.size())) {
+      //   PRINTF("index is %d\n", index);
+      //   abort();
+      // }
+      Vertex &srcVert = this->vertices[index];
+      for (const auto [neigh, edge] : this->neighbors[index]) {
+        Vertex &dstVert = this->vertices[neigh];
+        if (dstVert.layer <= srcVert.layer || edge.cap == 0)
+          continue;
+        if (neigh == SINK) {
+          PRINTF("done\n");
+          found = true;
         }
-        for (const auto [neigh, edge] : this->neighbors[index]) {
-          Vertex &srcVert = this->vertices[index];
-          Vertex &dstVert = this->vertices[neigh];
-          if (!isLayerReachable(srcVert, dstVert)) {
-            continue;
-          }
-          bool edited = true;
-// #pragma omp atomic capture
-          {
-            edited = visited[neigh];
-            visited[neigh] = true;
-          }
-          if (neigh == SINK) {
-            PRINTF("done\n");
-            found = true;
-          }
 
 //             assert(visited[dstVert.index]);
-          if (visitVertexParallel(srcVert, dstVert)) {
+        if (visitVertexParallel(srcVert, dstVert)) {
 //               PRINTF("adding vertex %d\n", dstVert.index);
-            localFrontier.push_back(neigh);
-          }
+          localFrontier.push_back(neigh);
         }
-      
       }
-      int startIndex = -1;
-// #pragma omp atomic capture
-      {
-        startIndex = lastWrite;
-        lastWrite += localFrontier.size();
-      }
-      assert(startIndex >= 0);
-      assert(startIndex < this->vertices.size());
+    }
 
-      if (localFrontier.size() > 0)
-        PRINTF("Start localFrontier print %d\n", omp_get_thread_num());
+    int startIndices[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    int size = threadFrontiers[0].size();
+    for (int i = 1; i < 8; i++) {
+      startIndices[i] = size;
+      size += threadFrontiers[i].size();
+    }
+
+    frontier.resize(size);
+    // The time this takes is negligible
+    #pragma omp parallel
+    {
+      int num = omp_get_thread_num();
+      int startIndex = startIndices[num];
+      std::vector<int>& localFrontier = threadFrontiers[num];
+      // assert(startIndex >= 0);
+      // assert(startIndex < this->vertices.size());
+
+      // if (localFrontier.size() > 0)
+      //   PRINTF("Start localFrontier print %d\n", omp_get_thread_num());
       for (int k = 0; k < localFrontier.size(); k++) {
-        PRINTF("%d ", startIndex + k);
-        assert(k >= 0 && k < this->vertices.size());
-        newFrontier[startIndex + k] = localFrontier[k];
+        // PRINTF("%d ", startIndex + k);
+        // assert(k >= 0 && k < this->vertices.size());
+        frontier[startIndex + k] = localFrontier[k];
       }
     //   if (localFrontier.size() > 0)
     //     PRINTF("\n End local Frontier print\n");
@@ -157,12 +147,7 @@ bool Graph::bfsParallel() {
     // }
     // PRINTF("\n");
     // PRINTF("Size is %d\n", lastWrite);
-    frontier.resize(lastWrite);
-    for (int i = 0; i < lastWrite; i++) {
-      frontier[i] = newFrontier[i];
-    }
   }
-  delete[] newFrontier;
   auto end = std::chrono::steady_clock::now();
   bfs_time +=
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start)
@@ -170,7 +155,7 @@ bool Graph::bfsParallel() {
   return found;
 }
 
-bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
+inline bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   if (dstVert.layer <= srcVert.layer ||
       this->neighbors[srcVert.index][dstVert.index].cap == 0) {
     PRINTF("dst layer: %d src layer: %d capacity %d\n", dstVert.layer,
@@ -182,21 +167,23 @@ bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   }
   return true;
 }
-bool Graph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
-// #pragma omp critical
-  { srcVert.layered_dst.push_back(dstVert.index); }
-
+inline bool Graph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
+  int num = omp_get_thread_num();
+  srcVert.layered_dst_array[num].push_back(dstVert.index);
   PRINTF("is layer set? %d\n", dstVert.layer == UNSET);
+  // maybe make this atomic?
+  // on second thought, maybe don't... dfs already checks for duplicates
   if (dstVert.layer == UNSET) {
     // frontier.push(dstVert.index);
     dstVert.layer = srcVert.layer + 1;
     return true;
-  } else {
-    if (dstVert.layer != srcVert.layer + 1) {
-      PRINTF("index: %d %d\n", dstVert.index, dstVert.layer);
-      abort();
-    }
-  }
+  } 
+  // else {
+  //   if (dstVert.layer != srcVert.layer + 1) {
+  //     PRINTF("index: %d %d\n", dstVert.index, dstVert.layer);
+  //     abort();
+  //   }
+  // }
   return false;
 }
 bool Graph::visitVertex(Vertex &srcVert, Vertex &dstVert) {
@@ -258,14 +245,19 @@ bool Graph::dfsDeadEdge() {
     int nodeInd = stack.top();
     Vertex &srcVert = this->vertices[nodeInd];
     visited[nodeInd] = true;
-    auto &neighborEdges = this->vertices[nodeInd].layered_dst;
+    auto &neighborEdges = srcVert.layered_dst_array[srcVert.current_edge_array];
     if (srcVert.current_edge == neighborEdges.size()) {
-      stack.pop();
-      increment(srcVert.parent);
+      if (srcVert.current_edge_array == 8 - 1) {
+        stack.pop();
+        increment(srcVert.parent);
+      } else {
+        srcVert.current_edge = 0;
+        srcVert.current_edge_array++;
+      }
       continue;
     }
     assert(srcVert.current_edge < neighborEdges.size());
-    int neigh = this->vertices[nodeInd].layered_dst[srcVert.current_edge];
+    int neigh = neighborEdges[srcVert.current_edge];
     // Vertex &dstVert = this->vertices[neigh];
     if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0) {
       increment(nodeInd);

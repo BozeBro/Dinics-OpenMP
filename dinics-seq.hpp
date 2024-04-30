@@ -24,15 +24,21 @@ struct Edge {
 struct Vertex {
   int index;
   int current_edge = 0;
+  int current_edge_array = 0;
   int layer = UNSET;
   int parent = -1;
   std::vector<int> layered_dst;
+  std::vector<int> layered_dst_array[8];
 
   void reset() {
     this->current_edge = 0;
+    this->current_edge_array = 0;
     this->layer = UNSET;
     this->parent = -1;
     this->layered_dst.clear();
+    for (int i = 0; i < 8; i++) {
+      this->layered_dst_array[i] = std::vector<int>();
+    }
   }
 };
 namespace std {

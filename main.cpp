@@ -16,7 +16,6 @@ int main(int argc, char **argv) {
   // dst: 1
   // nodes 2,3
   // src -5-> [2,3] -5-> dstVert
-  omp_set_num_threads(1);
   const auto init_start = std::chrono::steady_clock::now();
   std::string input_filename;
   char mode = '\0';
@@ -41,6 +40,7 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
   }
+  omp_set_num_threads(num_threads);
   if (empty(input_filename)) {
     std::cerr << "Usage: " << argv[0]
               << " -f input_filename -n num_threads "
@@ -109,6 +109,8 @@ int main(int argc, char **argv) {
   printf("Total time %f\n", compute_time + init_time);
   printf("BFS time %f\n", graph.bfs_time);
   printf("DFS time %f\n", graph.dfs_time);
+  // for (int i = 0; i < 24; i++)
+  //   printf("test time %f\n", graph.test_time[i]);
   printf("Flow value %d\n", flow);
 
   return 0;
