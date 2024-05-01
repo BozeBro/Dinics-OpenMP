@@ -11,7 +11,6 @@ Be able to run BFS and DFS through it in a simple way
 
 */
 #include <algorithm>
-#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <omp.h>
@@ -66,9 +65,9 @@ void Graph::validate() {
   }
   for (int vert = 0; vert < this->vertices.size(); vert++) {
     if (vert == 0 || vert == 1)
-      assert(vertFlows[0] == -vertFlows[1]);
+      ASSERT(vertFlows[0] == -vertFlows[1]);
     else
-      assert(vertFlows[vert] == 0);
+      ASSERT(vertFlows[vert] == 0);
   }
   // PRINTF("validation success!\n");
   // return false;
@@ -130,7 +129,7 @@ bool Graph::bfsParallel() {
               found = true;
             }
 
-            assert(visited[dstVert.index]);
+            ASSERT(visited[dstVert.index]);
             if (visitVertexParallel(srcVert, dstVert)) {
               PRINTF("adding vertex %d\n", dstVert.index);
               localFrontier.push_back(neigh);
@@ -144,14 +143,14 @@ bool Graph::bfsParallel() {
         startIndex = lastWrite;
         lastWrite += localFrontier.size();
       }
-      assert(startIndex >= 0);
-      assert(startIndex < this->vertices.size());
+      ASSERT(startIndex >= 0);
+      ASSERT(startIndex < this->vertices.size());
 
       if (localFrontier.size() > 0)
         PRINTF("Start localFrontier print %d\n", omp_get_thread_num());
       for (int k = 0; k < localFrontier.size(); k++) {
         PRINTF("%d ", startIndex + k);
-        assert(k >= 0 && k < this->vertices.size());
+        ASSERT(k >= 0 && k < this->vertices.size());
         newFrontier[startIndex + k] = localFrontier[k];
       }
       if (localFrontier.size() > 0)
@@ -234,7 +233,7 @@ bool Graph::bfs() {
     int src = frontier.front();
     if (src == SINK)
       foundSink = true;
-    assert(!visited[src]);
+    ASSERT(!visited[src]);
     frontier.pop();
     Vertex &srcVert = this->vertices[src];
     for (auto &[dst, edge] : this->neighbors[src]) {
@@ -272,7 +271,7 @@ bool Graph::dfsDeadEdge() {
       increment(srcVert.parent);
       continue;
     }
-    assert(srcVert.current_edge < neighborEdges.size());
+    ASSERT(srcVert.current_edge < neighborEdges.size());
     int neigh = this->vertices[nodeInd].layered_dst[srcVert.current_edge];
     // Vertex &dstVert = this->vertices[neigh];
     if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0) {
@@ -307,7 +306,7 @@ bool Graph::dfs() {
       continue;
     visited[nodeInd] = true;
     for (auto neigh : this->vertices[nodeInd].layered_dst) {
-      assert(this->neighbors[nodeInd][neigh].cap >= 0);
+      ASSERT(this->neighbors[nodeInd][neigh].cap >= 0);
       if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0)
         continue;
       this->vertices[neigh].parent = nodeInd;

@@ -40,7 +40,33 @@ bool MGraph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   }
   return true;
 }
+bool MGraph::bfsStep2(std::vector<bool> &visited, std::vector<int> &sizes,
+                      int step) {
+  bool sz = false;
+  int n = visited.size();
+#pragma omp parallel for
+  for (int i = 0; i < n; i++) {
+    for (int neighInd = 0; neighInd < n; neighInd++) {
+      if (this->vertices[i].layer != step ||
+          this->neighbors[i][neighInd].cap == 0)
+        continue;
 
+      Vertex &dstVert = this->vertices[neighInd];
+      Vertex &srcVert = this->vertices[i];
+      if (dstVert.layer <= step || !isLayerReachable(srcVert, dstVert)) {
+        continue;
+      }
+
+      sizes[i]++;
+      visited[neighInd] = true;
+      dstVert.layer = step + 1;
+      srcVert.layered_dst.push_back(neighInd);
+      sz = true;
+    }
+  }
+
+  return sz;
+}
 bool MGraph::bfsStep(std::vector<bool> &visited, std::vector<int> &sizes,
                      int step) {
   bool sz = false;
@@ -78,7 +104,7 @@ bool MGraph::bfsParallel() {
   int step = 0;
   while (seen && !visited[SINK]) {
 
-    seen = bfsStep(visited, neighSizes, step++);
+    seen = bfsStep2(visited, neighSizes, step++);
   }
   auto end = std::chrono::steady_clock::now();
   bfs_time +=
@@ -116,7 +142,7 @@ bool MGraph::dfsDeadEdge() {
       increment(srcVert.parent);
       continue;
     }
-    assert(srcVert.current_edge < neighborEdges.size());
+    ASSERT(srcVert.current_edge < neighborEdges.size());
     int neigh = neighborEdges[srcVert.current_edge];
     Vertex &dstVert = this->vertices[neigh];
     if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0 ||
@@ -172,9 +198,9 @@ void MGraph::addEdge(const Vertex &start, const Vertex &end, int cap) {
   // Max prevent capacity override if there are 2 node cycles
   this->adj_list[start.index].push_back(end.index);
   int cap_value = std::max(neighbors[start.index][end.index].cap, cap);
-  neighbors[start.index][end.index] = {cap_value, cap_value};
+  this->neighbors[start.index][end.index] = {cap_value, cap_value};
   cap_value = std::max(neighbors[end.index][start.index].cap, 0);
-  neighbors[end.index][start.index] = {cap_value, cap_value};
+  this->neighbors[end.index][start.index] = {cap_value, cap_value};
   // neighbors[end.index][start.index].cap =
   //     std::max(neighbors[end.index][start.index].cap, 0);
 }

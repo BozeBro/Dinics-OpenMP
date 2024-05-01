@@ -23,5 +23,6 @@ struct MGraph {
   void addEdge(const Vertex &start, const Vertex &end, int cap);
   void printEdgesVisualized();
   bool bfsStep(std::vector<bool> &visited, std::vector<int> &sizes, int step);
+  bool bfsStep2(std::vector<bool> &visited, std::vector<int> &sizes, int step);
 };
 #endif // !MGRAPH_HPP

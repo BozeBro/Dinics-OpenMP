@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
   }
   int n;
   fin >> n;
-  Graph graph(n);
+  MGraph graph(n);
 
   for (int i = 0; i < n; i++) {
     int cnt;
