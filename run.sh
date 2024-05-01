@@ -1,2 +1,3 @@
-g++-13 --std=c++17 -fopenmp -g *.cpp
-./a.out -f testInput/$1.txt -m 1 -n $2
+for i in 1 2 4 8; do 
+    $1 -f testInput/$2.txt -m 1 -n $i
+done
