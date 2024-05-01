@@ -9,3 +9,6 @@ testinput/bigInput*.txt
 *.dSYM
 out*
 .DS_Store
+*.out
+main
+*.txt
