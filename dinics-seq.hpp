@@ -10,7 +10,7 @@
 // If it's defined, define PRINTF as printf
 #include <assert.h>
 #define PRINTF(format, ...) printf(format, ##__VA_ARGS__)
-#define ASSERT(format) assert(format, ##__VA_ARGS__)
+#define ASSERT(format) assert(format)
 #else
 // If it's not defined, define PRINTF as an empty macro
 #define PRINTF(format, ...) ((void)0)
