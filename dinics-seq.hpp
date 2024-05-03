@@ -17,7 +17,7 @@
 #define PRINTF(format, ...) ((void)0)
 #endif
 
-#define MAX_THREADS 8
+#define MAX_THREADS 128
 
 struct Edge {
   int cap;
@@ -58,12 +58,14 @@ struct Graph {
 
   std::vector<Vertex> vertices;
   std::vector<std::unordered_map<int, Edge>> neighbors;
+  int edgeCount = 0;
 
   Graph(int size);
   void printEdges();
   void printEdgesVisualized();
   void validate();
   bool bfsParallel();
+  bool bfsCuda();
   bool isLayerReachable(const Vertex &srcVert, const Vertex &dstVert);
   bool visitVertexParallel(Vertex &srcVert, Vertex &dstVert);
   bool visitVertex(Vertex &srcVert, Vertex &dstVert);
@@ -78,6 +80,7 @@ struct Graph {
     neighbors[start.index][end.index] = {cap_value, cap_value};
     cap_value = std::max(neighbors[end.index][start.index].cap, 0);
     neighbors[end.index][start.index] = {cap_value, cap_value};
+    edgeCount++;
     // neighbors[end.index][start.index].cap =
     //     std::max(neighbors[end.index][start.index].cap, 0);
   }

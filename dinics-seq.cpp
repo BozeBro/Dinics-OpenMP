@@ -73,6 +73,8 @@ void Graph::validate() {
   // PRINTF("validation success!\n");
   // return false;
 }
+
+#ifdef USE_OPEN_MP
 bool Graph::bfsParallel() {
   auto start = std::chrono::steady_clock::now();
   // initialize visited array
@@ -155,6 +157,7 @@ bool Graph::bfsParallel() {
           .count();
   return found;
 }
+#endif
 
 inline bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   if (dstVert.layer <= srcVert.layer ||
@@ -168,6 +171,8 @@ inline bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert
   }
   return true;
 }
+
+#ifdef USE_OPEN_MP
 inline bool Graph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
   int num = omp_get_thread_num();
   srcVert.layered_dst_array[num].push_back(dstVert.index);
@@ -187,6 +192,8 @@ inline bool Graph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
   // }
   return false;
 }
+#endif
+
 bool Graph::visitVertex(Vertex &srcVert, Vertex &dstVert) {
   srcVert.layered_dst.push_back(dstVert.index);
   PRINTF("is layer set? %d\n", dstVert.layer == UNSET);

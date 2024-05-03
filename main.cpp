@@ -40,7 +40,10 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
   }
+  #ifdef USE_OPEN_MP
   omp_set_num_threads(num_threads);
+  #endif
+  
   if (empty(input_filename)) {
     std::cerr << "Usage: " << argv[0]
               << " -f input_filename -n num_threads "
