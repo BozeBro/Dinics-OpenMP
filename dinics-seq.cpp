@@ -307,8 +307,7 @@ bool Graph::bfs() {
     Vertex &srcVert = this->vertices[src];
     for (auto &[dst, edge] : this->neighbors[src]) {
       Vertex &dstVert = this->vertices[dst];
-      if (!visited[dstVert.index] && isLayerReachable(srcVert, dstVert) &&
-          visitVertex(srcVert, dstVert)) {
+      if (isLayerReachable(srcVert, dstVert) && visitVertex(srcVert, dstVert)) {
         frontier.push(dst);
       }
     }
