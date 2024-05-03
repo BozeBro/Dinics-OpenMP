@@ -104,7 +104,7 @@ bool MGraph::bfsParallel() {
   int step = 0;
   while (seen && !visited[SINK]) {
 
-    seen = bfsStep2(visited, neighSizes, step++);
+    seen = bfsStep(visited, neighSizes, step++);
   }
   auto end = std::chrono::steady_clock::now();
   bfs_time +=
