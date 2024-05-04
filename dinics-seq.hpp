@@ -22,6 +22,7 @@
 struct Edge {
   int cap;
   int initial_cap;
+  int index;
 };
 struct Vertex {
   int index;
@@ -54,11 +55,35 @@ template <> struct hash<Vertex> {
 
 struct Graph {
   double bfs_time = 0;
+  double bfs_aux_time = 0;
   double dfs_time = 0;
+
+  char* cudaFrontier;
+  char* cudaNewFrontier;
+  int* cudaEdgesStart;
+  int* cudaEdgesCount;
+  int* cudaEdges;
+  int* cudaLayeredEdgesCount;
+  int* cudaLayeredEdges;
+  int* cudaLayeredEdgeIndices;
+  int* cudaEdgeCapacities;
+  unsigned int* cudaVertDists;
+  char* cudaFoundSink;
+  char* cudaProgressed;
+
+  void initCuda();
+  void destroyCuda();
 
   std::vector<Vertex> vertices;
   std::vector<std::unordered_map<int, Edge>> neighbors;
   int edgeCount = 0;
+
+  std::vector<int> edgesStart;
+  std::vector<int> edgesCount;
+  std::vector<int> edgeCapacities;
+  std::vector<int> edges;
+  std::vector<int> layeredEdgesCount;
+  std::vector<int> layeredEdges;
 
   Graph(int size);
   void printEdges();
@@ -84,6 +109,31 @@ struct Graph {
     edgeCount += 2;
     // neighbors[end.index][start.index].cap =
     //     std::max(neighbors[end.index][start.index].cap, 0);
+  }
+
+  void compileEdges() {
+    edgesStart.resize(vertices.size());
+    edgesCount.resize(vertices.size());
+    edgeCapacities.resize(edgeCount);
+    edges.resize(edgeCount);
+    layeredEdgesCount.resize(vertices.size());
+    layeredEdges.resize(edgeCount);
+
+    int ec = 0;
+    for (int i = 0; i < vertices.size(); i++) {
+      edgesStart[i] = ec;
+      int numNeighbors = neighbors[i].size();
+      edgesCount[i] = numNeighbors;
+
+      int e = 0;
+      for (auto &[dst, edge] : this->neighbors[i]) {
+        edgeCapacities[ec + e] = edge.cap;
+        edges[ec + e] = dst;
+        edge.index = ec + e;
+        e++;
+      }
+      ec += e;
+    }
   }
 
   void reset();

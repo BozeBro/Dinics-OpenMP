@@ -76,6 +76,8 @@ int main(int argc, char **argv) {
   }
   // graph.printEdgesVisualized();
   // exit(0);
+  graph.compileEdges();
+  graph.initCuda();
 
   /*
     Make the layer graph BFS
@@ -101,7 +103,8 @@ int main(int argc, char **argv) {
   }
   for (int src = 1; src < n; src++) {
     Edge edge = graph.neighbors[src][SOURCE];
-    flow -= std::max(0, edge.initial_cap - edge.cap);
+    printf("%d %d\n", edge.initial_cap, graph.edgeCapacities[edge.index]);
+    flow -= std::min(0, edge.initial_cap - graph.edgeCapacities[edge.index]);
   }
   const double compute_time =
       std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -112,9 +115,11 @@ int main(int argc, char **argv) {
   printf("Total time %f\n", compute_time + init_time);
   printf("BFS time %f\n", graph.bfs_time);
   printf("DFS time %f\n", graph.dfs_time);
+  printf("Aux time %f\n", graph.bfs_aux_time);
   // for (int i = 0; i < 24; i++)
   //   printf("test time %f\n", graph.test_time[i]);
   printf("Flow value %d\n", flow);
-
+  graph.destroyCuda();
+  
   return 0;
 }
