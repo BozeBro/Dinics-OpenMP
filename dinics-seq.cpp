@@ -298,13 +298,20 @@ bool Graph::bfs() {
   std::vector<bool> visited(this->vertices.size(), false);
   this->vertices[SOURCE].layer = 0;
   frontier.push(SOURCE);
+  int sinkLayer = UNSET;
   while (!frontier.empty()) {
     int src = frontier.front();
-    if (src == SINK)
-      foundSink = true;
-    assert(!visited[src]);
     frontier.pop();
     Vertex &srcVert = this->vertices[src];
+    if (src == SINK) {
+      sinkLayer = srcVert.layer;
+      foundSink = true;
+      continue;
+    }
+    if (srcVert.layer >= sinkLayer) {
+      continue;
+    }
+    assert(!visited[src]);
     for (auto &[dst, edge] : this->neighbors[src]) {
       Vertex &dstVert = this->vertices[dst];
       if (isLayerReachable(srcVert, dstVert) && visitVertex(srcVert, dstVert)) {
