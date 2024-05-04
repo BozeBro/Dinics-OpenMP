@@ -227,7 +227,6 @@ void Graph::dinicsAlgo() {
         edgeCapacities[neighbors[cur.index][cur.parent].index] += minCapacity;
       }
     }
-    printf("dfs count = %d\n", i);
 
     reset();
   }

@@ -103,7 +103,6 @@ int main(int argc, char **argv) {
   }
   for (int src = 1; src < n; src++) {
     Edge edge = graph.neighbors[src][SOURCE];
-    printf("%d %d\n", edge.initial_cap, graph.edgeCapacities[edge.index]);
     flow -= std::min(0, edge.initial_cap - graph.edgeCapacities[edge.index]);
   }
   const double compute_time =
