@@ -98,12 +98,12 @@ int main(int argc, char **argv) {
 
   for (auto [_, edge] : graph.neighbors[SOURCE]) {
     // std::cout << i << ": " << edge.initial_cap << " " << edge.cap << '\n';
-    flow += edge.initial_cap - edge.cap;
+    flow += edge.initial_cap - graph.edgeCapacities[edge.index];
     // flow += i - edge;
   }
   for (int src = 1; src < n; src++) {
     Edge edge = graph.neighbors[src][SOURCE];
-    flow -= std::min(0, edge.initial_cap - graph.edgeCapacities[edge.index]);
+    flow -= std::max(0, edge.initial_cap - graph.edgeCapacities[edge.index]);
   }
   const double compute_time =
       std::chrono::duration_cast<std::chrono::duration<double>>(
