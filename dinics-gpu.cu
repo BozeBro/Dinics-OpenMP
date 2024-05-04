@@ -21,10 +21,11 @@ __global__ void bfsKernel(char* frontier, char* newFrontier, int level,
 
   for (int i = 0; i < ec; i++) {
     int dest = edges[es + i];
-    if (dest == 1)
-      *foundSink = true;
     
-    if (edgeCapacities[es + i] > 0 && vertDists[dest] > dist + 1) {
+    if (edgeCapacities[es + i] > 0 && vertDists[dest] >= dist + 1) {
+      if (dest == 1)
+        *foundSink = true;
+
       vertDists[dest] = dist + 1;
       newFrontier[dest] = true;
       layeredEdges[es + lc] = dest;
@@ -40,6 +41,7 @@ bool Graph::bfsCuda() {
   char* cudaFrontier;
   cudaMalloc(&cudaFrontier, sizeof(char) * vertices.size());
   cudaMemset(cudaFrontier, 0, sizeof(char) * vertices.size());
+  cudaMemset(cudaFrontier, 1, sizeof(char));
 
   char* cudaNewFrontier;
   cudaMalloc(&cudaNewFrontier, sizeof(char) * vertices.size());
@@ -66,6 +68,7 @@ bool Graph::bfsCuda() {
   unsigned int* cudaVertDists;
   cudaMalloc(&cudaVertDists, sizeof(int) * vertices.size());
   cudaMemset(cudaVertDists, 255, sizeof(int) * vertices.size());
+  cudaMemset(cudaVertDists, 0, sizeof(int));
 
   char* cudaFoundSink;
   cudaMalloc(&cudaFoundSink, sizeof(char));
@@ -91,13 +94,14 @@ bool Graph::bfsCuda() {
       edges[ec + e] = dst;
       e++;
     }
+    ec += e;
   }
 
   int level = 0;
   cudaMemcpy(cudaEdges, edges.data(), edgeCount * sizeof(int), cudaMemcpyHostToDevice);
   cudaMemcpy(cudaEdgeCapacities, edgeCapacities.data(), edgeCount * sizeof(int), cudaMemcpyHostToDevice);
   cudaMemcpy(cudaEdgesStart, edgesStart.data(), vertices.size() * sizeof(int), cudaMemcpyHostToDevice);
-  cudaMemcpy(cudaEdgesCount, edgesStart.data(), vertices.size() * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(cudaEdgesCount, edgesCount.data(), vertices.size() * sizeof(int), cudaMemcpyHostToDevice);
 
   const int threadsPerBlock = 512;
   const int blocks = (vertices.size() + threadsPerBlock - 1) / threadsPerBlock;
@@ -106,20 +110,31 @@ bool Graph::bfsCuda() {
   char progressed = false;
 
   do {
-  cudaMemset(cudaProgressed, 0, sizeof(char));
-  bfsKernel<<<blocks, threadsPerBlock>>>(cudaFrontier, cudaNewFrontier, level, 
-    cudaEdgesStart, cudaEdgesCount, cudaEdges, cudaLayeredEdgesCount, 
-    cudaLayeredEdges, cudaEdgeCapacities, cudaVertDists, 
-    vertices.size(), cudaFoundSink, cudaProgressed);
+    cudaMemset(cudaProgressed, 0, sizeof(char));
+    bfsKernel<<<blocks, threadsPerBlock>>>(cudaFrontier, cudaNewFrontier, level, 
+      cudaEdgesStart, cudaEdgesCount, cudaEdges, cudaLayeredEdgesCount, 
+      cudaLayeredEdges, cudaEdgeCapacities, cudaVertDists, 
+      vertices.size(), cudaFoundSink, cudaProgressed);
 
-  cudaMemcpy(cudaFrontier, cudaNewFrontier, sizeof(int) * vertices.size(), cudaMemcpyDeviceToDevice);
-  cudaMemset(cudaNewFrontier, 0, sizeof(char) * vertices.size());
+    cudaMemcpy(cudaFrontier, cudaNewFrontier, sizeof(char) * vertices.size(), cudaMemcpyDeviceToDevice);
+    cudaMemset(cudaNewFrontier, 0, sizeof(char) * vertices.size());
 
-  cudaMemcpy(&foundSink, cudaFoundSink, sizeof(char), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&progressed, cudaProgressed, sizeof(char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&foundSink, cudaFoundSink, sizeof(char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&progressed, cudaProgressed, sizeof(char), cudaMemcpyDeviceToHost);
 
-  level++;
+    level++;
   } while (!foundSink && progressed);
+
+  std::vector<int> layeredEdgesCount(vertices.size());
+  std::vector<int> layeredEdges(edgeCount);
+  cudaMemcpy(layeredEdges.data(), cudaLayeredEdges, edgeCount * sizeof(int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(layeredEdgesCount.data(), cudaLayeredEdgesCount, vertices.size() * sizeof(int), cudaMemcpyDeviceToHost);
+  for (int i = 0; i < vertices.size(); i++) {
+    vertices[i].layered_dst_array[0].resize(layeredEdgesCount[i]);
+    for (int j = 0; j < layeredEdgesCount[i]; j++) {
+      vertices[i].layered_dst_array[0][j] = layeredEdges[edgesStart[i] + j];
+    }
+  }
 
   cudaFree(cudaFrontier);
   cudaFree(cudaNewFrontier);

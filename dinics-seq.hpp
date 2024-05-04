@@ -17,7 +17,7 @@
 #define PRINTF(format, ...) ((void)0)
 #endif
 
-#define MAX_THREADS 128
+#define MAX_THREADS 1
 
 struct Edge {
   int cap;
@@ -66,6 +66,7 @@ struct Graph {
   void validate();
   bool bfsParallel();
   bool bfsCuda();
+  bool bfsCudaTimed();
   bool isLayerReachable(const Vertex &srcVert, const Vertex &dstVert);
   bool visitVertexParallel(Vertex &srcVert, Vertex &dstVert);
   bool visitVertex(Vertex &srcVert, Vertex &dstVert);
@@ -80,7 +81,7 @@ struct Graph {
     neighbors[start.index][end.index] = {cap_value, cap_value};
     cap_value = std::max(neighbors[end.index][start.index].cap, 0);
     neighbors[end.index][start.index] = {cap_value, cap_value};
-    edgeCount++;
+    edgeCount += 2;
     // neighbors[end.index][start.index].cap =
     //     std::max(neighbors[end.index][start.index].cap, 0);
   }

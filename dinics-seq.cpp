@@ -266,6 +266,7 @@ bool Graph::dfsDeadEdge() {
     }
     assert(srcVert.current_edge < neighborEdges.size());
     int neigh = neighborEdges[srcVert.current_edge];
+
     // Vertex &dstVert = this->vertices[neigh];
     if (visited[neigh] || this->neighbors[nodeInd][neigh].cap == 0) {
       increment(nodeInd);
@@ -279,6 +280,7 @@ bool Graph::dfsDeadEdge() {
               .count();
       return true;
     }
+
     stack.push(neigh);
   }
   auto end = std::chrono::steady_clock::now();
@@ -325,12 +327,23 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
   return os;
 }
 
+bool Graph::bfsCudaTimed() {
+  auto start = std::chrono::steady_clock::now();
+  bool result = bfsCuda();
+  auto end = std::chrono::steady_clock::now();
+  bfs_time += std::chrono::duration_cast<std::chrono::duration<double>>(end - start)
+              .count();
+  return result;
+}
+
 void Graph::dinicsAlgo() {
-  while (bfsParallel()) {
+  while (bfsCudaTimed()) {
     // PRINTF("Did a BFS\n");
 
     // printEdges();
+    int i = 0;
     while (dfsDeadEdge()) {
+      i++;
       // PRINTF("Finished dfs iteration\n");
       Vertex &dstVert = vertices[SINK];
       int minCapacity = UNSET;
