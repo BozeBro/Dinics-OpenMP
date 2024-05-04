@@ -77,26 +77,7 @@ bool Graph::bfsCuda() {
   cudaMemset(cudaVertDists, 0, sizeof(int));
   cudaMemset(cudaFoundSink, 0, sizeof(char));
 
-  // std::vector<int> edges(edgeCount);
-  // std::vector<int> edgeCapacities(edgeCount);
-  // std::vector<int> edgesStart(vertices.size());
-  // std::vector<int> edgesCount(vertices.size());
-
   auto start = std::chrono::steady_clock::now();
-  // int ec = 0;
-  // for (int i = 0; i < vertices.size(); i++) {
-  //   edgesStart[i] = ec;
-  //   int numNeighbors = neighbors[i].size();
-  //   edgesCount[i] = numNeighbors;
-
-  //   int e = 0;
-  //   for (auto &[dst, edge] : this->neighbors[i]) {
-  //     edgeCapacities[ec + e] = edge.cap;
-  //     edges[ec + e] = dst;
-  //     e++;
-  //   }
-  //   ec += e;
-  // }
 
   int level = 0;
   cudaMemcpy(cudaEdgeCapacities, edgeCapacities.data(), edgeCount * sizeof(int), cudaMemcpyHostToDevice);
@@ -129,12 +110,6 @@ bool Graph::bfsCuda() {
 
   cudaMemcpy(layeredEdges.data(), cudaLayeredEdges, edgeCount * sizeof(int), cudaMemcpyDeviceToHost);
   cudaMemcpy(layeredEdgesCount.data(), cudaLayeredEdgesCount, vertices.size() * sizeof(int), cudaMemcpyDeviceToHost);
-  // for (int i = 0; i < vertices.size(); i++) {
-  //   vertices[i].layered_dst.resize(layeredEdgesCount[i]);
-  //   for (int j = 0; j < layeredEdgesCount[i]; j++) {
-  //     vertices[i].layered_dst[j] = layeredEdges[edgesStart[i] + j];
-  //   }
-  // }
 
   return foundSink;
 }
