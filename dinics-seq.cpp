@@ -27,7 +27,7 @@ bool operator==(const Vertex &a, const Vertex &b) {
 }
 bool operator!=(const Vertex &a, const Vertex &b) { return !(a == b); }
 
-Graph::Graph(int size) : vertices(size), neighbors(size) {
+Graph::Graph(int size) : vertices(size), neighbors(size), locks(size) {
   for (int i = 0; i < size; i++) {
     vertices[i].index = i;
   }
@@ -190,8 +190,12 @@ bool Graph::isLayerReachable(const Vertex &srcVert, const Vertex &dstVert) {
   return true;
 }
 bool Graph::visitVertexParallel(Vertex &srcVert, Vertex &dstVert) {
-#pragma omp critical
-  { srcVert.layered_dst.push_back(dstVert.index); }
+// #pragma omp critical
+  
+  { 
+    std::scoped_lock lock(this->locks[srcVert.index]);
+    srcVert.layered_dst.push_back(dstVert.index); 
+  }
 
   PRINTF("is layer set? %d\n", dstVert.layer == UNSET);
   if (dstVert.layer == UNSET) {
@@ -343,7 +347,7 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
 }
 
 void Graph::dinicsAlgo() {
-  while (bfs()) {
+  while (bfsParallel()) {
     // PRINTF("Did a BFS\n");
 
     // printEdges();

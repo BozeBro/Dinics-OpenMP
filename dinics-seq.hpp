@@ -5,6 +5,7 @@
 #include <ostream>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
 // #define MY_PRINT_ENABLED
 #ifdef MY_PRINT_ENABLED
 // If it's defined, define PRINTF as printf
@@ -53,6 +54,7 @@ struct Graph {
 
   std::vector<Vertex> vertices;
   std::vector<std::unordered_map<int, Edge>> neighbors;
+  std::vector<std::mutex> locks;
 
   Graph(int size);
   void printEdges();
